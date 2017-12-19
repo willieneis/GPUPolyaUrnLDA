@@ -61,15 +61,23 @@ __device__ __forceinline__ u32 draw_wary_search(f32 u) {
   return 0;
 }
 
-__device__ __forceinline__ void count_topics(u32* z, u32 document_size, u32 max_K_d, HashMap* m, void* temp, i32 lane_idx, curandStatePhilox4_32_10_t* rng) {
-  // initialize the hash table
-  // m->init(temp, document_size, max_K_d, rng);
-
+__device__ __forceinline__ void count_topics(u32* z, u32 document_size, HashMap* m, i32 lane_idx) {
   // loop over z, add to m
   for(i32 offset = 0; offset < document_size / warpSize + 1; ++offset) {
     i32 i = offset * warpSize + lane_idx;
+    u32 lane_z;
+    u32 lane_K;
     if(i < document_size) {
-      // m->accumulate(z[i], i);
+      lane_z = z[i];
+      lane_K = 1;
+    } else {
+      lane_z = 0;
+      lane_K = 0;
+    }
+    for(i32 j = 0; j < warpSize/2; ++j) {
+      u32 half_warp_z = __shfl(lane_z, j, warpSize/2);
+      u32 half_warp_K = __shfl(lane_K, j, warpSize/2);
+      m->insert2(half_warp_z, half_warp_K);
     }
   }
 }
@@ -90,7 +98,7 @@ __global__ void warp_sample_topics(u32 size, u32 n_docs,
   i32 warp_idx = threadIdx.x / warpSize;
   curandStatePhilox4_32_10_t warp_rng = rng[0];
   __shared__ HashMap m[1];
-  u32** mPhi;// = (u32**) &m[1].temp_data;
+  u32* mPhi;
   __shared__ typename cub::WarpScan<i32>::TempStorage warp_scan_temp[1];
 
   // loop over documents
@@ -98,7 +106,8 @@ __global__ void warp_sample_topics(u32 size, u32 n_docs,
     // count topics in document
     u32 warp_d_len = d_len[i];
     u32 warp_d_idx = d_idx[i];
-//    count_topics(z + warp_d_idx * sizeof(u32), warp_d_len, max_K_d, &m[1], temp, lane_idx, &warp_rng);
+    // m->init();
+    count_topics(z + warp_d_idx * sizeof(u32), warp_d_len, &m[1], lane_idx);
 
     // loop over words
     for(i32 j = 0; j < warp_d_len; ++j) {
@@ -107,11 +116,11 @@ __global__ void warp_sample_topics(u32 size, u32 n_docs,
       u32 warp_w = 0;//w[warp_d_idx + j]; // why is this broken?
 
       // remove current z from sufficient statistic
-//      m[1].accumulate_no_insert(warp_z, &(lane_idx == 0 ? -1 : 0)); // decrement on 1st lane without branching
+      m->insert2(warp_z, lane_idx < 16 ? -1 : 0); // don't branch
 
       // compute m*phi and sigma_b
       f32 warp_sigma_a = 0.0f;
-      f32 sigma_b = compute_product_cumsum(*mPhi, &m[1], Phi_dense, warp_idx, warp_scan_temp);
+      f32 sigma_b = compute_product_cumsum(mPhi, &m[1], Phi_dense, warp_idx, warp_scan_temp);
 
       // update z
       f32 u1 = curand_uniform(&warp_rng);
@@ -125,7 +134,7 @@ __global__ void warp_sample_topics(u32 size, u32 n_docs,
       }
 
       // add new z to sufficient statistic
-//      m[1].accumulate(warp_z, lane_idx == 0); // increment on 1st lane without branching
+      m->insert2(warp_z, lane_idx < 16 ? -1 : 0); // don't branch
       if(lane_idx == 0) {
         z[warp_d_idx + j] = warp_z;
       }
