@@ -323,7 +323,7 @@ struct HashMap {
     i32 rebuild_b;
     i32 rebuild_c;
     i32 rebuild_d;
-    if(state == 2) {
+    if(state < 3) {
       data = data_1;
       size = size_1;
       rebuild_data = data_2;
@@ -553,7 +553,7 @@ struct HashMap {
     i32 b;
     i32 c;
     i32 d;
-    if(state == 1 || state == 2) {
+    if(state < 3) {
       data = data_1;
       size = size_1;
       a = a_1;
@@ -1023,7 +1023,7 @@ struct HashMap {
     i32 b;
     i32 c;
     i32 d;
-    if(state == 1 || state == 2) {
+    if(state < 3) {
       data = data_1;
       size = size_1;
       a = a_1;
