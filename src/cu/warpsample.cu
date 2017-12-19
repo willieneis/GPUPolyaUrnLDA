@@ -82,10 +82,41 @@ __device__ __forceinline__ void count_topics(u32* z, u32 document_size, HashMap*
   }
 }
 
-__device__ __forceinline__ f32 compute_product_cumsum(u32* mPhi, HashMap* m, f32* Phi_dense, i32 warp_idx, cub::WarpScan<i32>::TempStorage* temp) {
-  i32 thread_mPhi = 0;
-  cub::WarpScan<i32>(temp[warp_idx]).ExclusiveSum(thread_mPhi, thread_mPhi);
-  return 0.0f;
+__device__ __forceinline__ f32 compute_product_cumsum(f32* mPhi, HashMap* m, f32* Phi_dense, i32 lane_idx, cub::WarpScan<f32>::TempStorage* temp) {
+  typedef cub::WarpScan<f32> WarpScan;
+  u32 m_size;
+  u64* m_data;
+  if(m->state < 3) {
+    m_size = m->size_1;
+    m_data = m->data_1;
+  } else {
+    m_size = m->size_2;
+    m_data = m->data_2;
+  }
+
+  f32 initial_value = 0;
+  f32 total_value = 0;
+  for(i32 offset = 0; offset < m_size / warpSize + 1; ++offset) {
+    i32 i = offset * warpSize + lane_idx;
+    u64 m_i = (i < m_size) ? m_data[i] : 0;
+    u32 token = (i < m_size) ? m->key(m_i) : m->empty_key();
+    f32 m_count = (token == m->empty_key()) ? 0.0f : (float) m->value(m_i);
+    f32 Phi_count = (token == m->empty_key()) ? 0.0f : Phi_dense[token];
+    f32 thread_mPhi = m_count * Phi_count;
+
+    // compute scan
+    WarpScan(*temp).ExclusiveScan(thread_mPhi, thread_mPhi, 0, cub::Sum(), total_value);
+
+    // workaround for CUB bug: apply offset manually
+    thread_mPhi = thread_mPhi + initial_value;
+    initial_value = total_value + initial_value;
+
+    // write output to array
+    if(i < m_size) {
+      mPhi[i] = thread_mPhi;
+    }
+  }
+  return total_value;
 }
 
 __global__ void warp_sample_topics(u32 size, u32 n_docs,
@@ -98,8 +129,8 @@ __global__ void warp_sample_topics(u32 size, u32 n_docs,
   i32 warp_idx = threadIdx.x / warpSize;
   curandStatePhilox4_32_10_t warp_rng = rng[0];
   __shared__ HashMap m[1];
-  u32* mPhi;
-  __shared__ typename cub::WarpScan<i32>::TempStorage warp_scan_temp[1];
+  f32* mPhi;
+  __shared__ typename cub::WarpScan<f32>::TempStorage warp_scan_temp[1];
 
   // loop over documents
   for(i32 i = 0; i < n_docs; ++i) {
@@ -120,7 +151,7 @@ __global__ void warp_sample_topics(u32 size, u32 n_docs,
 
       // compute m*phi and sigma_b
       f32 warp_sigma_a = 0.0f;
-      f32 sigma_b = compute_product_cumsum(mPhi, &m[1], Phi_dense, warp_idx, warp_scan_temp);
+      f32 sigma_b = compute_product_cumsum(mPhi, &m[1], Phi_dense, lane_idx, warp_scan_temp);
 
       // update z
       f32 u1 = curand_uniform(&warp_rng);
@@ -134,7 +165,7 @@ __global__ void warp_sample_topics(u32 size, u32 n_docs,
       }
 
       // add new z to sufficient statistic
-      m->insert2(warp_z, lane_idx < 16 ? -1 : 0); // don't branch
+      m->insert2(warp_z, lane_idx < 16 ? 1 : 0); // don't branch
       if(lane_idx == 0) {
         z[warp_d_idx + j] = warp_z;
       }
