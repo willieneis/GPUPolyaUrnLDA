@@ -3,7 +3,7 @@
 #include "test_hashmap.cuh"
 #include "test_polyaurn.cuh"
 #include "test_spalias.cuh"
-#include "test_warpsample.cuh"
+#include "test_topics.cuh"
 
 namespace gpulda_test {
 
@@ -33,8 +33,8 @@ void run_tests() {
 
   std::cout << "testing compute_d_idx" << std::endl;
   test_compute_d_idx();
-  std::cout << "testing warp_sample_topics" << std::endl;
-  test_warp_sample_topics();
+  std::cout << "testing sample_topics" << std::endl;
+  test_sample_topics();
 
   std::cout << "tests completed" << std::endl;
 }

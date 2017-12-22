@@ -1,5 +1,5 @@
-#include "test_warpsample.cuh"
-#include "../warpsample.cuh"
+#include "test_topics.cuh"
+#include "../topics.cuh"
 #include "../error.cuh"
 #include "assert.h"
 
@@ -44,7 +44,7 @@ void test_compute_d_idx() {
   cudaFree(gpu_d_idx);
 }
 
-void test_warp_sample_topics() {
+void test_sample_topics() {
 
 }
 

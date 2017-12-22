@@ -1,5 +1,5 @@
 #include "hashmap.cuh"
-#include "warpsample.cuh"
+#include "topics.cuh"
 #include <thrust/system/cuda/detail/cub/block/block_scan.cuh>
 #include <thrust/system/cuda/detail/cub/warp/warp_scan.cuh>
 
@@ -119,7 +119,7 @@ __device__ __forceinline__ f32 compute_product_cumsum(f32* mPhi, HashMap* m, f32
   return total_value;
 }
 
-__global__ void warp_sample_topics(u32 size, u32 n_docs,
+__global__ void sample_topics(u32 size, u32 n_docs,
     u32* z, u32* w, u32* d_len, u32* d_idx, u32* K_d, u64* hash, f32* mPhi,
     u32 K, u32 V, u32 max_N_d,
     f32* Phi_dense,
@@ -129,7 +129,7 @@ __global__ void warp_sample_topics(u32 size, u32 n_docs,
   // i32 warp_idx = threadIdx.x / warpSize;
   curandStatePhilox4_32_10_t warp_rng = rng[0];
   __shared__ HashMap m[1];
-  constexpr u32 ring_buffer_size = 4/*threads*/ * 3/*32-bit values per thread*/;
+  constexpr u32 ring_buffer_size = 4*3; // number of concurrent elements * 32-bit values per concurrent element
   __shared__ u32 ring_buffer[ring_buffer_size];
   __shared__ typename cub::WarpScan<f32>::TempStorage warp_scan_temp[1];
 

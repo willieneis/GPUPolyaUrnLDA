@@ -37,7 +37,7 @@ int main(void) {
   std::cout << "launching poisson polya urn sampler" << std::endl;
   gpulda::sample_phi();
 
-  std::cout << "launching warp sampler" << std::endl;
+  std::cout << "launching topic indicator sampler" << std::endl;
   gpulda::sample_z_async(&buffer);
   gpulda::sync_buffer(&buffer);
 
