@@ -32,7 +32,8 @@ struct Buffer {
   u32* gpu_d_len;
   u32* gpu_d_idx;
   u32* gpu_K_d;
-  void* gpu_temp;
+  u64* gpu_hash;
+  f32* gpu_temp;
   curandStatePhilox4_32_10_t* gpu_rng;
   cudaStream_t* stream;
 };

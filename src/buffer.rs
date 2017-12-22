@@ -18,6 +18,8 @@ pub struct Buffer {
   gpu_d_len: *mut c_void,
   gpu_d_idx: *mut c_void,
   gpu_K_d: *mut c_void,
+  gpu_hash: *mut c_void,
+  gpu_temp: *mut c_void,
   gpu_rng: *mut c_void,
   stream: *mut c_void,
 }
@@ -43,13 +45,16 @@ impl Buffer {
       gpu_d_len: ptr::null_mut(),
       gpu_d_idx: ptr::null_mut(),
       gpu_K_d: ptr::null_mut(),
+      gpu_hash: ptr::null_mut(),
+      gpu_temp: ptr::null_mut(),
       gpu_rng: ptr::null_mut(),
       stream: ptr::null_mut(),
     };
-    // as_ptr doesn't take ownership, we need to be sure not to deallocate any arrays
+    // as_ptr doesn't take ownership, so we need to be sure not to deallocate any arrays
     mem::forget(z);
     mem::forget(w);
     mem::forget(d);
+    mem::forget(K_d);
     // return the buffer
     b
   }

@@ -120,7 +120,7 @@ __device__ __forceinline__ f32 compute_product_cumsum(f32* mPhi, HashMap* m, f32
 }
 
 __global__ void warp_sample_topics(u32 size, u32 n_docs,
-    u32* z, u32* w, u32* d_len, u32* d_idx, u32* K_d, void* temp,
+    u32* z, u32* w, u32* d_len, u32* d_idx, u32* K_d, u64* hash, f32* mPhi,
     u32 K, u32 V, u32 max_K_d,
     f32* Phi_dense,
     f32** prob, u32** alias, curandStatePhilox4_32_10_t* rng) {
@@ -129,7 +129,8 @@ __global__ void warp_sample_topics(u32 size, u32 n_docs,
   i32 warp_idx = threadIdx.x / warpSize;
   curandStatePhilox4_32_10_t warp_rng = rng[0];
   __shared__ HashMap m[1];
-  f32* mPhi;
+  constexpr u32 num_concurrent_elements = 4;
+  __shared__ u64 ring_buffer[3*num_concurrent_elements]; //3*num_concurrent_elements
   __shared__ typename cub::WarpScan<f32>::TempStorage warp_scan_temp[1];
 
   // loop over documents
@@ -137,7 +138,7 @@ __global__ void warp_sample_topics(u32 size, u32 n_docs,
     // count topics in document
     u32 warp_d_len = d_len[i];
     u32 warp_d_idx = d_idx[i];
-    // m->init();
+    m->init(hash, 2*max_K_d, max_K_d, num_concurrent_elements, &warp_rng, warpSize);
     count_topics(z + warp_d_idx * sizeof(u32), warp_d_len, &m[1], lane_idx);
 
     // loop over words

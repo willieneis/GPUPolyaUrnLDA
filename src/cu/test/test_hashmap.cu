@@ -12,8 +12,8 @@ using gplda::u64;
 
 namespace gplda_test {
 
-__global__ void test_hash_map_init(void* map_storage, u32 total_map_size, u32 initial_size, u32 num_concurrent_elements, u32* map_returned_size, curandStatePhilox4_32_10_t* rng) {
   __shared__ gplda::HashMap m[1];
+__global__ void test_hash_map_init(u64* map_storage, u32 total_map_size, u32 initial_size, u32 num_concurrent_elements, u32* map_returned_size, curandStatePhilox4_32_10_t* rng) {
   m->init(map_storage, total_map_size, initial_size, num_concurrent_elements, rng, blockDim.x);
   __syncthreads();
 
@@ -22,8 +22,8 @@ __global__ void test_hash_map_init(void* map_storage, u32 total_map_size, u32 in
   }
 }
 
-__global__ void test_hash_map_insert_print_steps(void* map_storage, curandStatePhilox4_32_10_t* rng) {
   #ifdef GPLDA_HASH_DEBUG
+__global__ void test_hash_map_insert_print_steps(u64* map_storage, curandStatePhilox4_32_10_t* rng) {
   // initialize
   __shared__ gplda::HashMap m[1];
   m->init(map_storage, 204, 96, 4, rng, blockDim.x);
@@ -83,7 +83,7 @@ __global__ void test_hash_map_insert_print_steps(void* map_storage, curandStateP
 
 
 
-__global__ void test_hash_map_insert_phase_1_search(void* map_storage, u32* error, curandStatePhilox4_32_10_t* rng) {
+__global__ void test_hash_map_insert_phase_1_search(u64* map_storage, u32* error, curandStatePhilox4_32_10_t* rng) {
   // initialize
   __shared__ gplda::HashMap m[1];
   m->init(map_storage, 204, 96, 4, rng, blockDim.x);
@@ -205,7 +205,7 @@ __global__ void test_hash_map_insert_phase_1_search(void* map_storage, u32* erro
 }
 
 
-__global__ void test_hash_map_insert_phase_1(void* map_storage, u32* error, curandStatePhilox4_32_10_t* rng) {
+__global__ void test_hash_map_insert_phase_1(u64* map_storage, u32* error, curandStatePhilox4_32_10_t* rng) {
   // initialize
   __shared__ gplda::HashMap m[1];
   m->init(map_storage, 204, 96, 4, rng, blockDim.x);
@@ -317,7 +317,7 @@ __global__ void test_hash_map_insert_phase_1(void* map_storage, u32* error, cura
 }
 
 
-__global__ void test_hash_map_insert_phase_2_determine_index(void* map_storage, u32* error, curandStatePhilox4_32_10_t* rng) {
+__global__ void test_hash_map_insert_phase_2_determine_index(u64* map_storage, u32* error, curandStatePhilox4_32_10_t* rng) {
   // variables
   i32 half_lane_idx = threadIdx.x % (warpSize/2);
   u32 half_lane_mask = 0x0000ffff << (((threadIdx.x % warpSize) / (warpSize / 2)) * (warpSize / 2));
@@ -404,7 +404,7 @@ __global__ void test_hash_map_insert_phase_2_determine_index(void* map_storage, 
 
 
 
-__global__ void test_hash_map_insert_phase_2_determine_stage_search(void* map_storage, u32* error, curandStatePhilox4_32_10_t* rng) {
+__global__ void test_hash_map_insert_phase_2_determine_stage_search(u64* map_storage, u32* error, curandStatePhilox4_32_10_t* rng) {
   // variables
   i32 half_lane_idx = threadIdx.x % (warpSize/2);
   u32 half_lane_mask = 0x0000ffff << (((threadIdx.x % warpSize) / (warpSize / 2)) * (warpSize / 2));
@@ -578,7 +578,7 @@ __global__ void test_hash_map_insert_phase_2_determine_stage_search(void* map_st
 
 
 
-__global__ void test_hash_map_insert_phase_2_determine_stage(void* map_storage, u32* error, curandStatePhilox4_32_10_t* rng) {
+__global__ void test_hash_map_insert_phase_2_determine_stage(u64* map_storage, u32* error, curandStatePhilox4_32_10_t* rng) {
   // initialize
   __shared__ gplda::HashMap m[1];
   m->init(map_storage, 204, 96, 4, rng, blockDim.x);
@@ -783,8 +783,8 @@ __global__ void test_hash_map_insert_phase_2_determine_stage(void* map_storage, 
 
 
 
-__global__ void test_hash_map_insert2(void* map_storage, u32 total_map_size, u32 num_unique_elements, u32 num_elements, u32 max_size, u32 num_concurrent_elements, u32* out, curandStatePhilox4_32_10_t* rng, i32 rebuild) {
   __shared__ gplda::HashMap m[1];
+__global__ void test_hash_map_insert2(u64* map_storage, u32 total_map_size, u32 num_unique_elements, u32 num_elements, u32 max_size, u32 num_concurrent_elements, u32* out, curandStatePhilox4_32_10_t* rng, i32 rebuild) {
   u32 initial_size = rebuild ? num_elements : max_size;
   m->init(map_storage, total_map_size, initial_size, num_concurrent_elements, rng, blockDim.x);
   i32 dim = blockDim.x / (warpSize / 2);
@@ -836,8 +836,8 @@ void test_hash_map_phase_1() {
   gplda::rng_init<<<1,1>>>(0,0,rng);
   cudaDeviceSynchronize() >> GPLDA_CHECK;
 
-  void* map;
   cudaMalloc(&map, total_map_size * sizeof(u64)) >> GPLDA_CHECK;
+  u64* map;
 
   u32* out;
   cudaMalloc(&out, sizeof(u32)) >> GPLDA_CHECK;
@@ -877,8 +877,8 @@ void test_hash_map_phase_2() {
   gplda::rng_init<<<1,1>>>(0,0,rng);
   cudaDeviceSynchronize() >> GPLDA_CHECK;
 
-  void* map;
   cudaMalloc(&map, total_map_size * sizeof(u64)) >> GPLDA_CHECK;
+  u64* map;
 
   u32* out;
   cudaMalloc(&out, sizeof(u32)) >> GPLDA_CHECK;
@@ -932,8 +932,8 @@ void test_hash_map() {
   gplda::rng_init<<<1,1>>>(0,0,rng);
   cudaDeviceSynchronize() >> GPLDA_CHECK;
 
-  void* map;
   cudaMalloc(&map, total_map_size * sizeof(u64)) >> GPLDA_CHECK;
+  u64* map;
   u64* map_host = new u64[total_map_size];
 
   u32* out;

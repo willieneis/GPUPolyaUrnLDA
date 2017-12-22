@@ -257,7 +257,7 @@ struct HashMap {
 
 
 
-  __device__ inline void init(void* in_data, u32 in_data_size, u32 initial_size, u32 num_concurrent_elements, curandStatePhilox4_32_10_t* in_rng, i32 dim) {
+  __device__ inline void init(u64* in_data, u32 in_data_size, u32 initial_size, u32 num_concurrent_elements, curandStatePhilox4_32_10_t* in_rng, i32 dim) {
     // calculate initialization variables common for all threads
     i32 thread_idx = threadIdx.x % dim;
     u64 empty_entry = entry(false, false, null_pointer(), empty_key(), 0);
@@ -267,7 +267,7 @@ struct HashMap {
     u32 size = min((initial_size / GPLDA_HASH_LINE_SIZE + 1) * GPLDA_HASH_LINE_SIZE, max_size);
 
     // perform pointer arithmetic
-    u64* data = (u64*) in_data;
+    u64* data = in_data;
     u64* temp_data = data + max_size; // no sizeof for typed pointer arithmetic
 
     // set map to empty
