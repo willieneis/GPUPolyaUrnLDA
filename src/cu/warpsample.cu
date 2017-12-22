@@ -126,11 +126,11 @@ __global__ void warp_sample_topics(u32 size, u32 n_docs,
     f32** prob, u32** alias, curandStatePhilox4_32_10_t* rng) {
   // initialize variables
   i32 lane_idx = threadIdx.x % warpSize;
-  i32 warp_idx = threadIdx.x / warpSize;
+  // i32 warp_idx = threadIdx.x / warpSize;
   curandStatePhilox4_32_10_t warp_rng = rng[0];
   __shared__ HashMap m[1];
-  constexpr u32 num_concurrent_elements = 4;
-  __shared__ u64 ring_buffer[3*num_concurrent_elements]; //3*num_concurrent_elements
+  constexpr u32 ring_buffer_size = 4/*threads*/ * 3/*32-bit values per thread*/;
+  __shared__ u32 ring_buffer[ring_buffer_size];
   __shared__ typename cub::WarpScan<f32>::TempStorage warp_scan_temp[1];
 
   // loop over documents
@@ -138,9 +138,10 @@ __global__ void warp_sample_topics(u32 size, u32 n_docs,
     // count topics in document
     u32 warp_d_len = d_len[i];
     u32 warp_d_idx = d_idx[i];
-    m->init(hash, 2*max_K_d, max_K_d, num_concurrent_elements, &warp_rng, warpSize);
-    count_topics(z + warp_d_idx * sizeof(u32), warp_d_len, &m[1], lane_idx);
-
+    m->init(hash, 2*max_K_d, max_K_d, ring_buffer, ring_buffer_size, &warp_rng, warpSize);
+    // __syncthreads; // ensure init has finished
+    count_topics(z + warp_d_idx * sizeof(u32), warp_d_len, m, lane_idx);
+    //
     // loop over words
     for(i32 j = 0; j < warp_d_len; ++j) {
       // load z,w from global memory
@@ -152,7 +153,7 @@ __global__ void warp_sample_topics(u32 size, u32 n_docs,
 
       // compute m*phi and sigma_b
       f32 warp_sigma_a = 0.0f;
-      f32 sigma_b = compute_product_cumsum(mPhi, &m[1], Phi_dense, lane_idx, warp_scan_temp);
+      f32 sigma_b = compute_product_cumsum(mPhi, m, Phi_dense, lane_idx, warp_scan_temp);
 
       // update z
       f32 u1 = curand_uniform(&warp_rng);

@@ -257,18 +257,25 @@ struct HashMap {
 
 
 
-  __device__ inline void init(u64* in_data, u32 in_data_size, u32 initial_size, u32 num_concurrent_elements, curandStatePhilox4_32_10_t* in_rng, i32 dim) {
+  __device__ inline void init(u64* in_data, u32 in_data_size, u32 initial_size, u32* in_buffer, u32 in_buffer_size, curandStatePhilox4_32_10_t* in_rng, i32 dim) {
     // calculate initialization variables common for all threads
     i32 thread_idx = threadIdx.x % dim;
     u64 empty_entry = entry(false, false, null_pointer(), empty_key(), 0);
 
     // round down to ensure cache alignment
-    u32 max_size = (((in_data_size - 3*num_concurrent_elements)/2) / GPULDA_HASH_LINE_SIZE) * GPULDA_HASH_LINE_SIZE;
+    u32 max_size = ((in_data_size / 2) / GPULDA_HASH_LINE_SIZE) * GPULDA_HASH_LINE_SIZE;
     u32 size = min((initial_size / GPULDA_HASH_LINE_SIZE + 1) * GPULDA_HASH_LINE_SIZE, max_size);
 
-    // perform pointer arithmetic
+    // perform pointer arithmetic for table
     u64* data = in_data;
     u64* temp_data = data + max_size; // no sizeof for typed pointer arithmetic
+
+    // perform pointer arithmetic for buffer
+    u32 num_concurrent = in_buffer_size / 6; // 2 per thread, 96 bits per element
+    u32 buffer_size = num_concurrent * 2;
+    u64* buffer = (u64*) in_buffer; // 64-bit array of size num_concurrent_elements values
+    u32* queue = (u32*) (in_buffer + buffer_size); // 32-bit array of size num_concurrent_elements values
+    ring_buffer_init(buffer, queue, buffer_size, dim);
 
     // set map to empty
     for(i32 offset = 0; offset < (2*max_size) / dim + 1; ++offset) {
@@ -277,8 +284,6 @@ struct HashMap {
         data[i] = empty_entry;
       }
     }
-
-    ring_buffer_init(temp_data + max_size, (u32*) (temp_data + max_size + 2*num_concurrent_elements), 2*num_concurrent_elements, dim);
 
     // set map parameters and calculate random hash functions
     if(thread_idx == 0) {

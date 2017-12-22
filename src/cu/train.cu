@@ -103,6 +103,7 @@ extern "C" void cleanup(Buffer* buffers, u32 n_buffers) {
     cudaFree(buffers[i].gpu_d_len) >> GPULDA_CHECK;
     cudaFree(buffers[i].gpu_d_idx) >> GPULDA_CHECK;
     cudaFree(buffers[i].gpu_K_d) >> GPULDA_CHECK;
+    cudaFree(buffers[i].gpu_hash) >> GPULDA_CHECK;
     cudaFree(buffers[i].gpu_temp) >> GPULDA_CHECK;
     cudaFree(buffers[i].gpu_rng) >> GPULDA_CHECK;
     cudaStreamDestroy(*buffers[i].stream) >> GPULDA_CHECK;
