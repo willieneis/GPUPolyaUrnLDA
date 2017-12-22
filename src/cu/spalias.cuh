@@ -2,7 +2,7 @@
 
 #include "types.cuh"
 
-namespace gplda {
+namespace gpulda {
 
 class SpAlias {
   public:

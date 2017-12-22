@@ -1,6 +1,6 @@
 #include "random.cuh"
 
-namespace gplda {
+namespace gpulda {
 
 // initializer for random number generator
 __global__ void rng_init(u32 seed, u32 subsequence, curandStatePhilox4_32_10_t* rng) {

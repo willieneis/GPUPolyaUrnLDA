@@ -1,7 +1,7 @@
 [package]
-name = "gplda"
+name = "gpulda"
 version = "0.0.1"
-authors = [ "Alexander Terenin, Mans Magnusson, Kunal Sarkleh and collaborators" ]
+authors = [ "Alexander Terenin, Måns Magnusson and collaborators" ]
 
 [dependencies]
 clap = "~2.19.0"

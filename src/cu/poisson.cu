@@ -4,7 +4,7 @@
 #include "train.cuh"
 
 
-namespace gplda {
+namespace gpulda {
 
 __global__ void build_poisson_prob(f32** prob, f32 beta, u32 table_size) {
   // determine constants
@@ -28,9 +28,9 @@ Poisson::Poisson(u32 ml, u32 mv, f32 b) {
   pois_alias = new SpAlias(max_lambda, max_value);
   // launch kernel to build the alias tables
   build_poisson_prob<<<max_lambda,96>>>(pois_alias->prob, beta, max_value);
-  cudaDeviceSynchronize() >> GPLDA_CHECK;
+  cudaDeviceSynchronize() >> GPULDA_CHECK;
   build_alias<<<max_lambda,32,2*next_pow2(max_value)*sizeof(i32)>>>(pois_alias->prob, pois_alias->alias, max_value);
-  cudaDeviceSynchronize() >> GPLDA_CHECK;
+  cudaDeviceSynchronize() >> GPULDA_CHECK;
 }
 
 Poisson::~Poisson() {

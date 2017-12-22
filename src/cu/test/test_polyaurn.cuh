@@ -1,6 +1,6 @@
 #pragma once
 
-namespace gplda_test {
+namespace gpulda_test {
 
 void test_polya_urn_init();
 void test_polya_urn_sample();

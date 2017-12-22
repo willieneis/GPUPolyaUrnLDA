@@ -4,16 +4,16 @@
 #include "../error.cuh"
 #include "assert.h"
 
-using gplda::FileLine;
-using gplda::f32;
-using gplda::i32;
-using gplda::u32;
-using gplda::u64;
+using gpulda::FileLine;
+using gpulda::f32;
+using gpulda::i32;
+using gpulda::u32;
+using gpulda::u64;
 
-namespace gplda_test {
+namespace gpulda_test {
 
-  __shared__ gplda::HashMap m[1];
 __global__ void test_hash_map_init(u64* map_storage, u32 total_map_size, u32 initial_size, u32 num_concurrent_elements, u32* map_returned_size, curandStatePhilox4_32_10_t* rng) {
+  __shared__ gpulda::HashMap m[1];
   m->init(map_storage, total_map_size, initial_size, num_concurrent_elements, rng, blockDim.x);
   __syncthreads();
 
@@ -22,10 +22,10 @@ __global__ void test_hash_map_init(u64* map_storage, u32 total_map_size, u32 ini
   }
 }
 
-  #ifdef GPLDA_HASH_DEBUG
 __global__ void test_hash_map_insert_print_steps(u64* map_storage, curandStatePhilox4_32_10_t* rng) {
+  #ifdef GPULDA_HASH_DEBUG
   // initialize
-  __shared__ gplda::HashMap m[1];
+  __shared__ gpulda::HashMap m[1];
   m->init(map_storage, 204, 96, 4, rng, blockDim.x);
   m->a_1=26; m->b_1=1; m->c_1=30; m->d_1=13;
   __syncthreads();
@@ -85,7 +85,7 @@ __global__ void test_hash_map_insert_print_steps(u64* map_storage, curandStatePh
 
 __global__ void test_hash_map_insert_phase_1_search(u64* map_storage, u32* error, curandStatePhilox4_32_10_t* rng) {
   // initialize
-  __shared__ gplda::HashMap m[1];
+  __shared__ gpulda::HashMap m[1];
   m->init(map_storage, 204, 96, 4, rng, blockDim.x);
   m->a_1=26; m->b_1=1; m->c_1=30; m->d_1=13;
   u64 empty = m->entry(false, false, m->null_pointer(), m->empty_key(), 0);
@@ -207,7 +207,7 @@ __global__ void test_hash_map_insert_phase_1_search(u64* map_storage, u32* error
 
 __global__ void test_hash_map_insert_phase_1(u64* map_storage, u32* error, curandStatePhilox4_32_10_t* rng) {
   // initialize
-  __shared__ gplda::HashMap m[1];
+  __shared__ gpulda::HashMap m[1];
   m->init(map_storage, 204, 96, 4, rng, blockDim.x);
   m->a_1=26; m->b_1=1; m->c_1=30; m->d_1=13;
   u64 empty = m->entry(false, false, m->null_pointer(), m->empty_key(), 0);
@@ -326,7 +326,7 @@ __global__ void test_hash_map_insert_phase_2_determine_index(u64* map_storage, u
   i32 half_warp_entry_idx;
 
   // initialize
-  __shared__ gplda::HashMap m[1];
+  __shared__ gpulda::HashMap m[1];
   m->init(map_storage, 204, 96, 4, rng, blockDim.x);
   m->a_1=26; m->b_1=1; m->c_1=30; m->d_1=13;
   __syncthreads();
@@ -416,7 +416,7 @@ __global__ void test_hash_map_insert_phase_2_determine_stage_search(u64* map_sto
   u64 half_warp_link_entry;
 
   // initialize
-  __shared__ gplda::HashMap m[1];
+  __shared__ gpulda::HashMap m[1];
   m->init(map_storage, 204, 96, 4, rng, blockDim.x);
   m->a_1=26; m->b_1=1; m->c_1=30; m->d_1=13;
   __syncthreads();
@@ -580,7 +580,7 @@ __global__ void test_hash_map_insert_phase_2_determine_stage_search(u64* map_sto
 
 __global__ void test_hash_map_insert_phase_2_determine_stage(u64* map_storage, u32* error, curandStatePhilox4_32_10_t* rng) {
   // initialize
-  __shared__ gplda::HashMap m[1];
+  __shared__ gpulda::HashMap m[1];
   m->init(map_storage, 204, 96, 4, rng, blockDim.x);
   m->a_1=26; m->b_1=1; m->c_1=30; m->d_1=13;
   u64 empty = m->entry(false, false, m->null_pointer(), m->empty_key(), 0);
@@ -783,8 +783,8 @@ __global__ void test_hash_map_insert_phase_2_determine_stage(u64* map_storage, u
 
 
 
-  __shared__ gplda::HashMap m[1];
 __global__ void test_hash_map_insert2(u64* map_storage, u32 total_map_size, u32 num_unique_elements, u32 num_elements, u32 max_size, u32 num_concurrent_elements, u32* out, curandStatePhilox4_32_10_t* rng, i32 rebuild) {
+  __shared__ gpulda::HashMap m[1];
   u32 initial_size = rebuild ? num_elements : max_size;
   m->init(map_storage, total_map_size, initial_size, num_concurrent_elements, rng, blockDim.x);
   i32 dim = blockDim.x / (warpSize / 2);
@@ -832,29 +832,29 @@ void test_hash_map_phase_1() {
   constexpr u32 total_map_size = 2*max_size + 3*num_concurrent_elements;
 
   curandStatePhilox4_32_10_t* rng;
-  cudaMalloc(&rng, sizeof(curandStatePhilox4_32_10_t)) >> GPLDA_CHECK;
-  gplda::rng_init<<<1,1>>>(0,0,rng);
-  cudaDeviceSynchronize() >> GPLDA_CHECK;
+  cudaMalloc(&rng, sizeof(curandStatePhilox4_32_10_t)) >> GPULDA_CHECK;
+  gpulda::rng_init<<<1,1>>>(0,0,rng);
+  cudaDeviceSynchronize() >> GPULDA_CHECK;
 
-  cudaMalloc(&map, total_map_size * sizeof(u64)) >> GPLDA_CHECK;
   u64* map;
+  cudaMalloc(&map, total_map_size * sizeof(u64)) >> GPULDA_CHECK;
 
   u32* out;
-  cudaMalloc(&out, sizeof(u32)) >> GPLDA_CHECK;
+  cudaMalloc(&out, sizeof(u32)) >> GPULDA_CHECK;
   u32 out_host = 0;
 
   // phase 1 search
   test_hash_map_insert_phase_1_search<<<1,warpSize>>>(map, out, rng);
-  cudaDeviceSynchronize() >> GPLDA_CHECK;
+  cudaDeviceSynchronize() >> GPULDA_CHECK;
 
-  cudaMemcpy(&out_host, out, sizeof(u32), cudaMemcpyDeviceToHost) >> GPLDA_CHECK;
+  cudaMemcpy(&out_host, out, sizeof(u32), cudaMemcpyDeviceToHost) >> GPULDA_CHECK;
   assert(out_host == 0);
 
   // phase 1
   test_hash_map_insert_phase_1<<<1,warpSize>>>(map, out, rng);
-  cudaDeviceSynchronize() >> GPLDA_CHECK;
+  cudaDeviceSynchronize() >> GPULDA_CHECK;
 
-  cudaMemcpy(&out_host, out, sizeof(u32), cudaMemcpyDeviceToHost) >> GPLDA_CHECK;
+  cudaMemcpy(&out_host, out, sizeof(u32), cudaMemcpyDeviceToHost) >> GPULDA_CHECK;
   assert(out_host == 0);
 
   // cleanup
@@ -873,40 +873,40 @@ void test_hash_map_phase_2() {
   constexpr u32 total_map_size = 2*max_size + 3*num_concurrent_elements;
 
   curandStatePhilox4_32_10_t* rng;
-  cudaMalloc(&rng, sizeof(curandStatePhilox4_32_10_t)) >> GPLDA_CHECK;
-  gplda::rng_init<<<1,1>>>(0,0,rng);
-  cudaDeviceSynchronize() >> GPLDA_CHECK;
+  cudaMalloc(&rng, sizeof(curandStatePhilox4_32_10_t)) >> GPULDA_CHECK;
+  gpulda::rng_init<<<1,1>>>(0,0,rng);
+  cudaDeviceSynchronize() >> GPULDA_CHECK;
 
-  cudaMalloc(&map, total_map_size * sizeof(u64)) >> GPLDA_CHECK;
   u64* map;
+  cudaMalloc(&map, total_map_size * sizeof(u64)) >> GPULDA_CHECK;
 
   u32* out;
-  cudaMalloc(&out, sizeof(u32)) >> GPLDA_CHECK;
+  cudaMalloc(&out, sizeof(u32)) >> GPULDA_CHECK;
   u32 out_host = 0;
 
   // phase 2 determine index
   test_hash_map_insert_phase_2_determine_index<<<1,warpSize>>>(map, out, rng);
-  cudaDeviceSynchronize() >> GPLDA_CHECK;
+  cudaDeviceSynchronize() >> GPULDA_CHECK;
 
-  cudaMemcpy(&out_host, out, sizeof(u32), cudaMemcpyDeviceToHost) >> GPLDA_CHECK;
+  cudaMemcpy(&out_host, out, sizeof(u32), cudaMemcpyDeviceToHost) >> GPULDA_CHECK;
   assert(out_host == 0);
 
   // phase 2 determine stage search
   test_hash_map_insert_phase_2_determine_stage_search<<<1,warpSize>>>(map, out, rng);
-  cudaDeviceSynchronize() >> GPLDA_CHECK;
+  cudaDeviceSynchronize() >> GPULDA_CHECK;
 
-  cudaMemcpy(&out_host, out, sizeof(u32), cudaMemcpyDeviceToHost) >> GPLDA_CHECK;
+  cudaMemcpy(&out_host, out, sizeof(u32), cudaMemcpyDeviceToHost) >> GPULDA_CHECK;
   assert(out_host == 0);
 
   // phase 2 determine stage
   test_hash_map_insert_phase_2_determine_stage<<<1,warpSize>>>(map, out, rng);
-  cudaDeviceSynchronize() >> GPLDA_CHECK;
+  cudaDeviceSynchronize() >> GPULDA_CHECK;
 
-  cudaMemcpy(&out_host, out, sizeof(u32), cudaMemcpyDeviceToHost) >> GPLDA_CHECK;
+  cudaMemcpy(&out_host, out, sizeof(u32), cudaMemcpyDeviceToHost) >> GPULDA_CHECK;
   assert(out_host == 0);
 
   // test_hash_map_insert_print_steps<<<1,warpSize>>>(map, rng);
-  // cudaDeviceSynchronize() >> GPLDA_CHECK;
+  // cudaDeviceSynchronize() >> GPULDA_CHECK;
 
   // cleanup
   cudaFree(out);
@@ -923,31 +923,31 @@ void test_hash_map() {
   constexpr u32 num_elements = 90; // large contention to ensure collisions occur
   constexpr u32 num_unique_elements = 9;
   constexpr u32 warpSize = 32;
-  constexpr u32 num_concurrent_elements = GPLDA_POLYA_URN_SAMPLE_BLOCKDIM/(warpSize/2);
+  constexpr u32 num_concurrent_elements = GPULDA_POLYA_URN_SAMPLE_BLOCKDIM/(warpSize/2);
   constexpr u32 total_map_size = 2*max_size + 3*num_concurrent_elements;
   constexpr u64 empty = (((u64) 0x7f) << 55) | (((u64) 0xfffff) << 35);
 
   curandStatePhilox4_32_10_t* rng;
-  cudaMalloc(&rng, sizeof(curandStatePhilox4_32_10_t)) >> GPLDA_CHECK;
-  gplda::rng_init<<<1,1>>>(0,0,rng);
-  cudaDeviceSynchronize() >> GPLDA_CHECK;
+  cudaMalloc(&rng, sizeof(curandStatePhilox4_32_10_t)) >> GPULDA_CHECK;
+  gpulda::rng_init<<<1,1>>>(0,0,rng);
+  cudaDeviceSynchronize() >> GPULDA_CHECK;
 
-  cudaMalloc(&map, total_map_size * sizeof(u64)) >> GPLDA_CHECK;
   u64* map;
+  cudaMalloc(&map, total_map_size * sizeof(u64)) >> GPULDA_CHECK;
   u64* map_host = new u64[total_map_size];
 
   u32* out;
-  cudaMalloc(&out, num_elements * sizeof(u32)) >> GPLDA_CHECK;
+  cudaMalloc(&out, num_elements * sizeof(u32)) >> GPULDA_CHECK;
   u32* out_host = new u32[num_elements];
 
   // init<warp>
   test_hash_map_init<<<1,warpSize>>>(map, total_map_size, max_size, num_concurrent_elements, out, rng);
-  cudaDeviceSynchronize() >> GPLDA_CHECK;
+  cudaDeviceSynchronize() >> GPULDA_CHECK;
 
-  cudaMemcpy(map_host, map, total_map_size * sizeof(u64), cudaMemcpyDeviceToHost) >> GPLDA_CHECK;
-  cudaMemcpy(out_host, out, sizeof(u32), cudaMemcpyDeviceToHost) >> GPLDA_CHECK;
+  cudaMemcpy(map_host, map, total_map_size * sizeof(u64), cudaMemcpyDeviceToHost) >> GPULDA_CHECK;
+  cudaMemcpy(out_host, out, sizeof(u32), cudaMemcpyDeviceToHost) >> GPULDA_CHECK;
 
-  assert(out_host[0] == (max_size / GPLDA_HASH_LINE_SIZE) * GPLDA_HASH_LINE_SIZE);
+  assert(out_host[0] == (max_size / GPULDA_HASH_LINE_SIZE) * GPULDA_HASH_LINE_SIZE);
   for(i32 i = 0; i < out_host[0]; ++i) {
     assert(map_host[i] == empty);
     map_host[i] = 0;
@@ -955,13 +955,13 @@ void test_hash_map() {
   out_host[0] = 0;
 
   // init<block>
-  test_hash_map_init<<<1,GPLDA_POLYA_URN_SAMPLE_BLOCKDIM>>>(map, total_map_size, max_size, num_concurrent_elements, out, rng);
-  cudaDeviceSynchronize() >> GPLDA_CHECK;
+  test_hash_map_init<<<1,GPULDA_POLYA_URN_SAMPLE_BLOCKDIM>>>(map, total_map_size, max_size, num_concurrent_elements, out, rng);
+  cudaDeviceSynchronize() >> GPULDA_CHECK;
 
-  cudaMemcpy(map_host, map, total_map_size * sizeof(u64), cudaMemcpyDeviceToHost) >> GPLDA_CHECK;
-  cudaMemcpy(out_host, out, sizeof(u32), cudaMemcpyDeviceToHost) >> GPLDA_CHECK;
+  cudaMemcpy(map_host, map, total_map_size * sizeof(u64), cudaMemcpyDeviceToHost) >> GPULDA_CHECK;
+  cudaMemcpy(out_host, out, sizeof(u32), cudaMemcpyDeviceToHost) >> GPULDA_CHECK;
 
-  assert(out_host[0] == (max_size / GPLDA_HASH_LINE_SIZE) * GPLDA_HASH_LINE_SIZE);
+  assert(out_host[0] == (max_size / GPULDA_HASH_LINE_SIZE) * GPULDA_HASH_LINE_SIZE);
   for(i32 i = 0; i < out_host[0]; ++i) {
     assert(map_host[i] == empty);
     map_host[i] = 0;
@@ -970,9 +970,9 @@ void test_hash_map() {
 
   // insert2: warp, no rebuild
   test_hash_map_insert2<<<1,warpSize>>>(map, total_map_size, num_unique_elements, num_elements, max_size, num_concurrent_elements, out, rng, false);
-  cudaDeviceSynchronize() >> GPLDA_CHECK;
+  cudaDeviceSynchronize() >> GPULDA_CHECK;
 
-  cudaMemcpy(out_host, out, num_elements * sizeof(u32), cudaMemcpyDeviceToHost) >> GPLDA_CHECK;
+  cudaMemcpy(out_host, out, num_elements * sizeof(u32), cudaMemcpyDeviceToHost) >> GPULDA_CHECK;
 
   for(i32 i = 0; i < num_unique_elements; ++i) {
     assert(out_host[i] == num_elements / num_unique_elements);
@@ -980,10 +980,10 @@ void test_hash_map() {
   }
 
   // insert2: block, no rebuild
-  test_hash_map_insert2<<<1,GPLDA_POLYA_URN_SAMPLE_BLOCKDIM>>>(map, total_map_size, num_unique_elements, num_elements, max_size, num_concurrent_elements, out, rng, false);
-  cudaDeviceSynchronize() >> GPLDA_CHECK;
+  test_hash_map_insert2<<<1,GPULDA_POLYA_URN_SAMPLE_BLOCKDIM>>>(map, total_map_size, num_unique_elements, num_elements, max_size, num_concurrent_elements, out, rng, false);
+  cudaDeviceSynchronize() >> GPULDA_CHECK;
 
-  cudaMemcpy(out_host, out, num_elements * sizeof(u32), cudaMemcpyDeviceToHost) >> GPLDA_CHECK;
+  cudaMemcpy(out_host, out, num_elements * sizeof(u32), cudaMemcpyDeviceToHost) >> GPULDA_CHECK;
 
   for(i32 i = 0; i < num_unique_elements; ++i) {
     assert(out_host[i] == num_elements / num_unique_elements);
@@ -992,9 +992,9 @@ void test_hash_map() {
 
   // insert2: warp, rebuild
   test_hash_map_insert2<<<1,warpSize>>>(map, total_map_size, num_unique_elements, num_elements, max_size, num_concurrent_elements, out, rng, true);
-  cudaDeviceSynchronize() >> GPLDA_CHECK;
+  cudaDeviceSynchronize() >> GPULDA_CHECK;
 
-  cudaMemcpy(out_host, out, num_elements * sizeof(u32), cudaMemcpyDeviceToHost) >> GPLDA_CHECK;
+  cudaMemcpy(out_host, out, num_elements * sizeof(u32), cudaMemcpyDeviceToHost) >> GPULDA_CHECK;
 
   for(i32 i = 0; i < num_unique_elements; ++i) {
     assert(out_host[i] == num_elements / num_unique_elements);
@@ -1002,10 +1002,10 @@ void test_hash_map() {
   }
 
   // insert2: block, rebuild
-  test_hash_map_insert2<<<1,GPLDA_POLYA_URN_SAMPLE_BLOCKDIM>>>(map, total_map_size, num_unique_elements, num_elements, max_size, num_concurrent_elements, out, rng, true);
-  cudaDeviceSynchronize() >> GPLDA_CHECK;
+  test_hash_map_insert2<<<1,GPULDA_POLYA_URN_SAMPLE_BLOCKDIM>>>(map, total_map_size, num_unique_elements, num_elements, max_size, num_concurrent_elements, out, rng, true);
+  cudaDeviceSynchronize() >> GPULDA_CHECK;
 
-  cudaMemcpy(out_host, out, num_elements * sizeof(u32), cudaMemcpyDeviceToHost) >> GPLDA_CHECK;
+  cudaMemcpy(out_host, out, num_elements * sizeof(u32), cudaMemcpyDeviceToHost) >> GPULDA_CHECK;
 
   for(i32 i = 0; i < num_unique_elements; ++i) {
     assert(out_host[i] == num_elements / num_unique_elements);

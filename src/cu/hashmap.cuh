@@ -4,16 +4,16 @@
 #include "tuning.cuh"
 #include <curand_kernel.h> // need to add -lcurand to nvcc flags
 
-#define GPLDA_HASH_LINE_SIZE 16
-#define GPLDA_HASH_MAX_NUM_LINES 4
-#define GPLDA_HASH_GROWTH_RATE 1.2f
-#define GPLDA_HASH_DEBUG 1
+#define GPULDA_HASH_LINE_SIZE 16
+#define GPULDA_HASH_MAX_NUM_LINES 4
+#define GPULDA_HASH_GROWTH_RATE 1.2f
+#define GPULDA_HASH_DEBUG 1
 
-#ifdef GPLDA_HASH_DEBUG
+#ifdef GPULDA_HASH_DEBUG
 #include <cstdio>
 #endif
 
-namespace gplda {
+namespace gpulda {
 
 struct HashMap {
   u32 size_1;
@@ -128,7 +128,7 @@ struct HashMap {
 
 
 
-  #ifdef GPLDA_HASH_DEBUG
+  #ifdef GPULDA_HASH_DEBUG
   __device__ inline void debug_print_slot(u32 slot, i32 table = 1) {
     // determine state
     u64* data = table == 2 ? data_2 : data_1;
@@ -238,19 +238,19 @@ struct HashMap {
 
 
   __device__ __forceinline__ i32 hash_slot(u32 key, i32 x, i32 y, i32 size) {
-    return (((x * key + y) % 334214459) % (size / GPLDA_HASH_LINE_SIZE)) * GPLDA_HASH_LINE_SIZE;
+    return (((x * key + y) % 334214459) % (size / GPULDA_HASH_LINE_SIZE)) * GPULDA_HASH_LINE_SIZE;
   }
 
   __device__ __forceinline__ i32 key_distance(u32 key, u32 slot, u32 size, u32 a, u32 b, u32 c, u32 d) {
     u32 initial_slot = hash_slot(key,a,b,size);
     u32 stride = hash_slot(key,c,d,size);
     #pragma unroll
-    for(i32 i = 0; i < GPLDA_HASH_MAX_NUM_LINES - 1; ++i) {
+    for(i32 i = 0; i < GPULDA_HASH_MAX_NUM_LINES - 1; ++i) {
       if((initial_slot + i*stride) % size == slot) {
         return i;
       }
     }
-    return GPLDA_HASH_MAX_NUM_LINES;
+    return GPULDA_HASH_MAX_NUM_LINES;
   }
 
 
@@ -263,8 +263,8 @@ struct HashMap {
     u64 empty_entry = entry(false, false, null_pointer(), empty_key(), 0);
 
     // round down to ensure cache alignment
-    u32 max_size = (((in_data_size - 3*num_concurrent_elements)/2) / GPLDA_HASH_LINE_SIZE) * GPLDA_HASH_LINE_SIZE;
-    u32 size = min((initial_size / GPLDA_HASH_LINE_SIZE + 1) * GPLDA_HASH_LINE_SIZE, max_size);
+    u32 max_size = (((in_data_size - 3*num_concurrent_elements)/2) / GPULDA_HASH_LINE_SIZE) * GPULDA_HASH_LINE_SIZE;
+    u32 size = min((initial_size / GPULDA_HASH_LINE_SIZE + 1) * GPULDA_HASH_LINE_SIZE, max_size);
 
     // perform pointer arithmetic
     u64* data = in_data;
@@ -292,7 +292,7 @@ struct HashMap {
       b_1 = __float2uint_rz(size * r_1.x);
       c_1 = __float2uint_rz(size * r_1.y);
       d_1 = __float2uint_rz(size * r_1.z);
-      size_2 = umin(max_size, __float2uint_rz(size * GPLDA_HASH_GROWTH_RATE) + warpSize);
+      size_2 = umin(max_size, __float2uint_rz(size * GPULDA_HASH_GROWTH_RATE) + warpSize);
       data_2 = temp_data;
       float4 r_2 = curand_uniform4(rng);
       a_2 = __float2uint_rz(size * r_2.w);
@@ -366,14 +366,14 @@ struct HashMap {
         b_1 = __float2uint_rz(size * r_1.x);
         c_1 = __float2uint_rz(size * r_1.y);
         d_1 = __float2uint_rz(size * r_1.z);
-        size_1 = umin(max_size, __float2uint_rz(size_2 * GPLDA_HASH_GROWTH_RATE) + warpSize);
+        size_1 = umin(max_size, __float2uint_rz(size_2 * GPULDA_HASH_GROWTH_RATE) + warpSize);
       } else if(lane_idx == 0 && resize_state == 4) {
         float4 r_2 = curand_uniform4(rng);
         a_2 = __float2uint_rz(size * r_2.w);
         b_2 = __float2uint_rz(size * r_2.x);
         c_2 = __float2uint_rz(size * r_2.y);
         d_2 = __float2uint_rz(size * r_2.z);
-        size_2 = umin(max_size, __float2uint_rz(size_1 * GPLDA_HASH_GROWTH_RATE) + warpSize);
+        size_2 = umin(max_size, __float2uint_rz(size_1 * GPULDA_HASH_GROWTH_RATE) + warpSize);
       }
 
       // set old memory to empty
@@ -572,7 +572,7 @@ struct HashMap {
     // check table
     i32 initial_slot = hash_slot(half_warp_key,a,b,size);
     i32 stride = hash_slot(half_warp_key,c,d,size);
-    for(i32 i = 0; i < GPLDA_HASH_MAX_NUM_LINES; ++i) {
+    for(i32 i = 0; i < GPULDA_HASH_MAX_NUM_LINES; ++i) {
       // compute slot and retrieve entry
       i32 slot = (initial_slot + i * stride) % size;
       u64 entry = data[slot + half_lane_idx];
@@ -672,7 +672,7 @@ struct HashMap {
     // find slot to perform insertion
     swap_type = 0;
     swap_idx = -1;
-    for(i32 i = key_distance(half_warp_key, slot, size, a, b, c, d); i < GPLDA_HASH_MAX_NUM_LINES; ++i) {
+    for(i32 i = key_distance(half_warp_key, slot, size, a, b, c, d); i < GPULDA_HASH_MAX_NUM_LINES; ++i) {
       // retrieve entry for current half lane, set constants
       thread_address = &data[slot + half_lane_idx];
       thread_entry = *thread_address;
@@ -712,7 +712,7 @@ struct HashMap {
       // advance slot, declare failure if reached limit
       if(swap_idx >= 0) {
         break;
-      } else if(i == GPLDA_HASH_MAX_NUM_LINES - 1) {
+      } else if(i == GPULDA_HASH_MAX_NUM_LINES - 1) {
         insert_failed = true;
       } else {
         slot = (slot + stride) % size;
@@ -763,7 +763,7 @@ struct HashMap {
   __device__ inline void insert_phase_2_determine_stage_search(u64* data, u32 size, u32 a, u32 b, u32 c, u32 d, i32 half_lane_idx, u32 half_lane_mask, i32 slot, u64 half_warp_entry, u64& half_warp_temp, i32& half_warp_temp_idx, i32& stage, u64 half_warp_link_entry) {
     // Either stage 2 or 3: element has relocation bit, but its first linked element doesn't: find slot relocated element is supposed to go in
     i32 stride = hash_slot(key(half_warp_entry),c,d,size);
-    i32 max_num_lines = GPLDA_HASH_MAX_NUM_LINES - key_distance(key(half_warp_entry), slot, size, a, b, c, d);
+    i32 max_num_lines = GPULDA_HASH_MAX_NUM_LINES - key_distance(key(half_warp_entry), slot, size, a, b, c, d);
     for(i32 i = 1; i <= max_num_lines; ++i) {
       // if we're at the last iteration and haven't exited the loop yet, return indicating failure
       if(i == max_num_lines) {
@@ -901,7 +901,7 @@ struct HashMap {
 
     // advance to next slot, until we find the previously-lined entry's key
     i32 advance_stride = hash_slot(key(half_warp_new_entry), c,d,size);
-    i32 advance_max_num_lines = GPLDA_HASH_MAX_NUM_LINES - key_distance(key(half_warp_new_entry), slot, size, a, b, c, d);
+    i32 advance_max_num_lines = GPULDA_HASH_MAX_NUM_LINES - key_distance(key(half_warp_new_entry), slot, size, a, b, c, d);
     for(i32 i = 1; i < advance_max_num_lines; ++i) {
       i32 advance_slot = (slot + i * advance_stride) % size;
       u64* address = &data[advance_slot + half_lane_idx];

@@ -3,7 +3,7 @@
 #include "types.cuh"
 #include "spalias.cuh"
 
-namespace gplda {
+namespace gpulda {
 
 class Poisson {
   public:

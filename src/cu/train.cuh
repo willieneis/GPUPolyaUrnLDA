@@ -9,7 +9,7 @@
 #include "poisson.cuh"
 #include "spalias.cuh"
 
-namespace gplda {
+namespace gpulda {
 
 struct Args {
   f32 alpha;

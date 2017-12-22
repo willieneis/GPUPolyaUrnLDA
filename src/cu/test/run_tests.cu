@@ -5,7 +5,7 @@
 #include "test_spalias.cuh"
 #include "test_warpsample.cuh"
 
-namespace gplda_test {
+namespace gpulda_test {
 
 void run_tests() {
   std::cout << "running tests" << std::endl;

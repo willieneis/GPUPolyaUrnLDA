@@ -3,10 +3,10 @@
 #include <thrust/system/cuda/detail/cub/block/block_scan.cuh>
 #include <thrust/system/cuda/detail/cub/warp/warp_scan.cuh>
 
-namespace gplda {
+namespace gpulda {
 
 __global__ void compute_d_idx(u32* d_len, u32* d_idx, u32 n_docs) {
-  typedef cub::BlockScan<i32, GPLDA_COMPUTE_D_IDX_BLOCKDIM> BlockScan;
+  typedef cub::BlockScan<i32, GPULDA_COMPUTE_D_IDX_BLOCKDIM> BlockScan;
   __shared__ typename BlockScan::TempStorage temp;
 
   if(blockIdx.x == 0) {

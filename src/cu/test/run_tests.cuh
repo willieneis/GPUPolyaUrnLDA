@@ -1,6 +1,6 @@
 #pragma once
 
-namespace gplda_test {
+namespace gpulda_test {
 
 void run_tests();
 

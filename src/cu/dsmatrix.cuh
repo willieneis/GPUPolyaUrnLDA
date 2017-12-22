@@ -2,7 +2,7 @@
 
 #include "types.cuh"
 
-namespace gplda {
+namespace gpulda {
 
 template<class T>
 class DSMatrix {

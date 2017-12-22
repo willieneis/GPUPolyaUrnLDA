@@ -4,7 +4,7 @@
 #include <thrust/system/cuda/detail/cub/block/block_scan.cuh> // workaround for CUB missing include
 #include <thrust/system/cuda/detail/cub/block/block_reduce.cuh>
 
-namespace gplda {
+namespace gpulda {
 
 __device__ __forceinline__ f32 draw_poisson(f32 u, f32 beta, u32 n,
     f32** prob, u32** alias, u32 max_lambda, u32 max_value) {
@@ -72,7 +72,7 @@ __global__ void polya_urn_sample(f32* Phi, u32* n, f32 beta, u32 V,
   __shared__ f32 block_sum[1];
   curandStatePhilox4_32_10_t thread_rng = rng[0];
   skipahead((unsigned long long int) blockIdx.x*blockDim.x + threadIdx.x, &thread_rng);
-  typedef cub::BlockReduce<f32, GPLDA_POLYA_URN_SAMPLE_BLOCKDIM, cub::BLOCK_REDUCE_RAKING_COMMUTATIVE_ONLY> BlockReduce;
+  typedef cub::BlockReduce<f32, GPULDA_POLYA_URN_SAMPLE_BLOCKDIM, cub::BLOCK_REDUCE_RAKING_COMMUTATIVE_ONLY> BlockReduce;
   __shared__ typename BlockReduce::TempStorage temp;
 
   // loop over array and draw samples
@@ -108,9 +108,9 @@ __global__ void polya_urn_sample(f32* Phi, u32* n, f32 beta, u32 V,
 
 
 void polya_urn_transpose(cudaStream_t* stream, f32* Phi, f32* Phi_temp, u32 K, u32 V, cublasHandle_t* handle, f32* d_zero, f32* d_one) {
-  cudaMemcpyAsync(Phi_temp, Phi, V * K * sizeof(f32), cudaMemcpyDeviceToDevice, *stream) >> GPLDA_CHECK;
-  cublasSetStream(*handle, *stream) >> GPLDA_CHECK; //
-  cublasSgeam(*handle, CUBLAS_OP_T, CUBLAS_OP_N, K, V, d_one, Phi_temp, V, d_zero, Phi, K, Phi, K) >> GPLDA_CHECK;
+  cudaMemcpyAsync(Phi_temp, Phi, V * K * sizeof(f32), cudaMemcpyDeviceToDevice, *stream) >> GPULDA_CHECK;
+  cublasSetStream(*handle, *stream) >> GPULDA_CHECK; //
+  cublasSgeam(*handle, CUBLAS_OP_T, CUBLAS_OP_N, K, V, d_one, Phi_temp, V, d_zero, Phi, K, Phi, K) >> GPULDA_CHECK;
 }
 
 __global__ void polya_urn_reset(u32* n, u32 V) {
@@ -128,7 +128,7 @@ __global__ void polya_urn_colsums(f32* Phi, f32* sigma_a, f32 alpha, f32** prob,
   // initialize variables
   f32 thread_sum = 0.0f;
   __shared__ f32 block_sum[1];
-  typedef cub::BlockReduce<f32, GPLDA_POLYA_URN_COLSUMS_BLOCKDIM, cub::BLOCK_REDUCE_RAKING_COMMUTATIVE_ONLY> BlockReduce;
+  typedef cub::BlockReduce<f32, GPULDA_POLYA_URN_COLSUMS_BLOCKDIM, cub::BLOCK_REDUCE_RAKING_COMMUTATIVE_ONLY> BlockReduce;
   __shared__ typename BlockReduce::TempStorage temp;
 
   // loop over array and compute column sums

@@ -3,7 +3,7 @@
 #include "train.cuh"
 #include "spalias.cuh"
 
-namespace gplda {
+namespace gpulda {
 
 __host__ __device__ u32 next_pow2(u32 x) {
   x--;
@@ -182,15 +182,15 @@ SpAlias::SpAlias(u32 nt, u32 ts) {
   u32** alias_host = new u32*[num_tables];
   // allocate each Alias table
   for(i32 i = 0; i < num_tables; ++i) {
-    cudaMalloc(&prob_host[i], table_size * sizeof(f32)) >> GPLDA_CHECK;
-    cudaMalloc(&alias_host[i], table_size * sizeof(u32)) >> GPLDA_CHECK;
+    cudaMalloc(&prob_host[i], table_size * sizeof(f32)) >> GPULDA_CHECK;
+    cudaMalloc(&alias_host[i], table_size * sizeof(u32)) >> GPULDA_CHECK;
   }
   // now, allocate array of pointers on device
-  cudaMalloc(&prob, num_tables * sizeof(f32*)) >> GPLDA_CHECK;
-  cudaMalloc(&alias, num_tables * sizeof(u32*)) >> GPLDA_CHECK;
+  cudaMalloc(&prob, num_tables * sizeof(f32*)) >> GPULDA_CHECK;
+  cudaMalloc(&alias, num_tables * sizeof(u32*)) >> GPULDA_CHECK;
   // copy array of pointers to device
-  cudaMemcpy(prob, prob_host, num_tables * sizeof(f32*), cudaMemcpyHostToDevice) >> GPLDA_CHECK;
-  cudaMemcpy(alias, alias_host, num_tables * sizeof(u32*), cudaMemcpyHostToDevice) >> GPLDA_CHECK;
+  cudaMemcpy(prob, prob_host, num_tables * sizeof(f32*), cudaMemcpyHostToDevice) >> GPULDA_CHECK;
+  cudaMemcpy(alias, alias_host, num_tables * sizeof(u32*), cudaMemcpyHostToDevice) >> GPULDA_CHECK;
   // deallocate array of pointers on host
   delete[] prob_host;
   delete[] alias_host;
@@ -201,16 +201,16 @@ SpAlias::~SpAlias() {
   f32** prob_host = new f32*[num_tables];
   u32** alias_host = new u32*[num_tables];
   // copy array of pointers to host
-  cudaMemcpy(prob_host, prob, num_tables * sizeof(f32*), cudaMemcpyDeviceToHost) >> GPLDA_CHECK;
-  cudaMemcpy(alias_host, alias, num_tables * sizeof(u32*), cudaMemcpyDeviceToHost) >> GPLDA_CHECK;
+  cudaMemcpy(prob_host, prob, num_tables * sizeof(f32*), cudaMemcpyDeviceToHost) >> GPULDA_CHECK;
+  cudaMemcpy(alias_host, alias, num_tables * sizeof(u32*), cudaMemcpyDeviceToHost) >> GPULDA_CHECK;
   // free the memory at the arrays being pointed to
   for(i32 i = 0; i < num_tables; ++i) {
-    cudaFree(prob_host[i]) >> GPLDA_CHECK;
-    cudaFree(alias_host[i]) >> GPLDA_CHECK;
+    cudaFree(prob_host[i]) >> GPULDA_CHECK;
+    cudaFree(alias_host[i]) >> GPULDA_CHECK;
   }
   // free the memory of the pointer array on device
-  cudaFree(prob) >> GPLDA_CHECK;
-  cudaFree(alias) >> GPLDA_CHECK;
+  cudaFree(prob) >> GPULDA_CHECK;
+  cudaFree(alias) >> GPULDA_CHECK;
   // deallocate array of pointers on host
   delete[] prob_host;
   delete[] alias_host;

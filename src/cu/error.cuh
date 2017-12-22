@@ -2,7 +2,7 @@
 
 #include <cstdio>
 
-namespace gplda {
+namespace gpulda {
 
 struct FileLine {
     const char* file;
@@ -70,4 +70,4 @@ inline void operator>>(curandStatus_t error, const FileLine &fl) {
 
 }
 
-#define GPLDA_CHECK FileLine(__FILE__, __LINE__)
+#define GPULDA_CHECK FileLine(__FILE__, __LINE__)
