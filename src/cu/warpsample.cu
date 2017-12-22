@@ -146,7 +146,7 @@ __global__ void warp_sample_topics(u32 size, u32 n_docs,
     for(i32 j = 0; j < warp_d_len; ++j) {
       // load z,w from global memory
       u32 warp_z = z[warp_d_idx + j];
-      u32 warp_w = 0;//w[warp_d_idx + j]; // why is this broken?
+      u32 warp_w = w[warp_d_idx + j];
 
       // remove current z from sufficient statistic
       m->insert2(warp_z, lane_idx < 16 ? -1 : 0); // don't branch
@@ -163,7 +163,7 @@ __global__ void warp_sample_topics(u32 size, u32 n_docs,
         warp_z = draw_wary_search(u2);
       } else {
         // sample from alias table
-        warp_z = draw_alias(u2, prob[warp_w], alias[warp_w], /*table_size =*/ 1, lane_idx);
+        warp_z = draw_alias(u2, prob[warp_w], alias[warp_w], /*table_size =*/1, lane_idx);
       }
 
       // add new z to sufficient statistic
