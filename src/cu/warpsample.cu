@@ -121,7 +121,7 @@ __device__ __forceinline__ f32 compute_product_cumsum(f32* mPhi, HashMap* m, f32
 
 __global__ void warp_sample_topics(u32 size, u32 n_docs,
     u32* z, u32* w, u32* d_len, u32* d_idx, u32* K_d, u64* hash, f32* mPhi,
-    u32 K, u32 V, u32 max_K_d,
+    u32 K, u32 V, u32 max_N_d,
     f32* Phi_dense,
     f32** prob, u32** alias, curandStatePhilox4_32_10_t* rng) {
   // initialize variables
@@ -138,7 +138,7 @@ __global__ void warp_sample_topics(u32 size, u32 n_docs,
     // count topics in document
     u32 warp_d_len = d_len[i];
     u32 warp_d_idx = d_idx[i];
-    m->init(hash, 2*max_K_d, max_K_d, ring_buffer, ring_buffer_size, &warp_rng, warpSize);
+    m->init(hash, 2*max_N_d, max_N_d, ring_buffer, ring_buffer_size, &warp_rng, warpSize);
     // __syncthreads; // ensure init has finished
     count_topics(z + warp_d_idx * sizeof(u32), warp_d_len, m, lane_idx);
     //
