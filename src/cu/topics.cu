@@ -57,8 +57,48 @@ __device__ __forceinline__ u32 draw_alias(f32 u, f32* prob, u32* alias, u32 tabl
   return ret;
 }
 
-__device__ __forceinline__ u32 draw_wary_search(f32 u) {
-  return 0;
+__device__ __forceinline__ u32 draw_wary_search(f32 u, HashMap* m, f32* mPhi, f32 sigma_b, i32 lane_idx) {
+  // determine size and key array
+  u32 size;
+  u64* data;
+  if(m->state < 3) {
+    size = m->size_1;
+    data = m->data_1;
+  } else {
+    size = m->size_2;
+    data = m->data_2;
+  }
+
+  u32 thread_key;
+  if(lane_idx < warpSize/2) {
+    // perform search
+    i32 left = 0;
+    i32 right = size/16;
+    f32 target = u * sigma_b;
+    i32 index;
+    f32 thread_mPhi;
+    do {
+      index = (left + right) / 2;
+      thread_mPhi = mPhi[(16*index) + lane_idx];
+      u32 up = __ballot(target > thread_mPhi);
+      u32 down = __ballot(target < thread_mPhi);
+      if(__popc(up) == warpSize/2) {
+        right = index;
+      } else if(__popc(down) == warpSize/2) {
+        left = index;
+      } else {
+        left = index;
+        right = index;
+      }
+    } while(left != right);
+
+    // retreive keys and determine value
+    u64 thread_data = data[(16*index) + lane_idx];
+    u32 lane_found = __ballot(target > thread_mPhi);
+    thread_key = __shfl(m->key(thread_data), __ffs(lane_found) - 1);
+  }
+
+  return __shfl(thread_key, 0);
 }
 
 __device__ __forceinline__ void count_topics(u32* z, u32 document_size, HashMap* m, i32 lane_idx) {
@@ -129,7 +169,7 @@ __global__ void sample_topics(u32 size, u32 n_docs,
   // i32 warp_idx = threadIdx.x / warpSize;
   curandStatePhilox4_32_10_t warp_rng = rng[0];
   __shared__ HashMap m[1];
-  constexpr u32 ring_buffer_size = 4*3; // number of concurrent elements * 32-bit values per concurrent element
+  constexpr u32 ring_buffer_size = 4*3; // number of concurrent elements * 96 bits per concurrent element
   __shared__ u32 ring_buffer[ring_buffer_size];
   __shared__ typename cub::WarpScan<f32>::TempStorage warp_scan_temp[1];
 
@@ -139,7 +179,7 @@ __global__ void sample_topics(u32 size, u32 n_docs,
     u32 warp_d_len = d_len[i];
     u32 warp_d_idx = d_idx[i];
     m->init(hash, 2*max_N_d, max_N_d, ring_buffer, ring_buffer_size, &warp_rng, warpSize);
-    // __syncthreads; // ensure init has finished
+    __syncthreads; // ensure init has finished
     count_topics(z + warp_d_idx * sizeof(u32), warp_d_len, m, lane_idx);
     //
     // loop over words
@@ -160,7 +200,7 @@ __global__ void sample_topics(u32 size, u32 n_docs,
       f32 u2 = curand_uniform(&warp_rng);
       if(u1 * (warp_sigma_a + sigma_b) > warp_sigma_a) {
         // sample from m*Phi
-        warp_z = draw_wary_search(u2);
+        warp_z = draw_wary_search(u2, m, mPhi, sigma_b, lane_idx);
       } else {
         // sample from alias table
         warp_z = draw_alias(u2, prob[warp_w], alias[warp_w], /*table_size =*/1, lane_idx);
