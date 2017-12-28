@@ -14,3 +14,5 @@ Cargo.lock
 /output/
 .ptp-sync*
 .settings/
+/data/
+/stoplists/
