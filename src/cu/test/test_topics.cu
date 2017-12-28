@@ -44,7 +44,47 @@ void test_compute_d_idx() {
   cudaFree(gpu_d_idx);
 }
 
+__global__ void test_draw_wary_search(u32* error) {
+  i32 lane_idx = threadIdx.x % warpSize;
+  f32 u = 0.1;
+  constexpr i32 size = 10;
+  __shared__ gpulda::HashMap m[1];
+  __shared__ u64 data[size];
+  m->size_1 = size;
+  m->data_1 = data;
+  m->state = 2;
+  __shared__ f32 mPhi[size];
+  f32 sigma_b = 75.0f;
+
+  u64 empty = m->entry(0, 0, m->null_pointer(), 0, 0);
+  for(i32 offset = 0; offset < size / warpSize + 1; ++offset) {
+    i32 i = offset * warpSize + lane_idx;
+    if(i<size) {
+      data[i] = m->with_key(i, empty);
+      mPhi[i] = ((float)i) * sigma_b / ((float)size);
+    }
+  }
+
+  u32 topic = gpulda::draw_wary_search(u, m, mPhi, sigma_b, lane_idx);
+
+  if(lane_idx==0 && topic!=9){
+    error[0] = 1;
+  }
+}
+
 void test_sample_topics() {
+  constexpr u32 warpSize = 32;
+
+  u32* out;
+  cudaMalloc(&out, sizeof(u32)) >> GPULDA_CHECK;
+  u32 out_host = 0;
+
+  // test draw_wary_search
+  test_draw_wary_search<<<1,warpSize>>>(out);
+  cudaDeviceSynchronize() >> GPULDA_CHECK;
+
+  cudaMemcpy(&out_host, out, sizeof(u32), cudaMemcpyDeviceToHost) >> GPULDA_CHECK;
+  assert(out_host == 0);
 
 }
 
