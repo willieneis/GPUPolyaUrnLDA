@@ -45,6 +45,37 @@ void test_compute_d_idx() {
   cudaFree(gpu_d_idx);
 }
 
+__global__ void test_draw_alias(u32* error) {
+  // compute constants
+  i32 lane_idx = threadIdx.x % warpSize;
+  constexpr u32 size = 5;
+  __shared__ f32 prob[size];
+  __shared__ u32 alias[size];
+
+  // build alias table
+  for(i32 offset = 0; offset < size / warpSize + 1; ++offset) {
+    i32 i = offset * warpSize + lane_idx;
+    if(i<size) {
+      prob[i] = 0.5;
+      alias[i] = 1;
+    }
+  }
+
+  // draw from prob
+  u32 topic = gpulda::draw_alias(0.6, prob, alias, size, lane_idx);
+
+  if(lane_idx==0 && topic!=3){
+    error[0] = 1;
+  }
+
+  // draw from alias
+  topic = gpulda::draw_alias(0.75, prob, alias, size, lane_idx);
+
+  if(lane_idx==0 && topic!=1){
+    error[0] = 2;
+  }
+}
+
 __global__ void test_draw_wary_search(u32* error) {
   i32 lane_idx = threadIdx.x % warpSize;
   f32 u = 0.2f;
@@ -186,6 +217,13 @@ void test_sample_topics() {
   u32* out;
   cudaMalloc(&out, sizeof(u32)) >> GPULDA_CHECK;
   u32 out_host = 0;
+
+  // draw topic via Alias table
+  test_draw_alias<<<1,warpSize>>>(out);
+  cudaDeviceSynchronize() >> GPULDA_CHECK;
+
+  cudaMemcpy(&out_host, out, sizeof(u32), cudaMemcpyDeviceToHost) >> GPULDA_CHECK;
+  assert(out_host == 0);
 
   // draw topic via wary search
   test_draw_wary_search<<<1,warpSize>>>(out);
