@@ -1,5 +1,6 @@
 #include "test_topics.cuh"
 #include "../topics.cuh"
+#include "../random.cuh"
 #include "../error.cuh"
 #include "assert.h"
 
@@ -68,19 +69,83 @@ __global__ void test_draw_wary_search(u32* error) {
   u32 topic = gpulda::draw_wary_search(u, m, mPhi, sigma_b, lane_idx);
 
   if(lane_idx==0 && topic!=9){
-    error[0] = 1;
+   error[0] = 1;
+  }
+}
+
+__global__ void test_count_topics(u32* error, curandStatePhilox4_32_10_t* rng) {
+  // compute constants
+  i32 lane_idx = threadIdx.x % warpSize;
+  i32 half_lane_idx = lane_idx % (warpSize/2);
+  curandStatePhilox4_32_10_t warp_rng = rng[0];
+  constexpr u32 cutoff = 25;
+  __shared__ u32 count[cutoff];
+
+  // declare arguments
+  constexpr u32 size = 100;
+  __shared__ u32 z[size];
+  __shared__ gpulda::HashMap m[1];
+  __shared__ u64 data[2*size];
+  constexpr u32 ring_buffer_size = 4*3; // number of concurrent elements * 96 bits per concurrent element
+  __shared__ u32 ring_buffer[ring_buffer_size];
+  m->init(data, 2*size, size, ring_buffer, ring_buffer_size, &warp_rng, warpSize);
+  __syncthreads();
+
+  // prepare state
+  for(i32 offset = 0; offset < size / warpSize + 1; ++offset) {
+    i32 i = offset * warpSize + lane_idx;
+    if(i < size) {
+      z[i] = i % cutoff;
+    }
+  }
+
+  // test count_topics
+  gpulda::count_topics(z, size, m, lane_idx);
+
+  // // retrieve values
+  for(i32 offset = 0; offset < cutoff / 2 + 1; ++offset) {
+    i32 i = offset * 2 + (lane_idx < warpSize/2 ? 0 : 1);
+    if(i < cutoff) {
+      u32 ct = m->get2(i);
+      if(half_lane_idx == 0) {
+        count[i] = ct;
+      }
+    }
+  }
+
+
+  // check correctness
+  if(lane_idx == 0) {
+    for(i32 i = 0; i < cutoff; ++i) {
+      if(count[i] != size/cutoff) {
+        error[0] = i;
+        break;
+      }
+    }
   }
 }
 
 void test_sample_topics() {
   constexpr u32 warpSize = 32;
 
+  curandStatePhilox4_32_10_t* rng;
+  cudaMalloc(&rng, sizeof(curandStatePhilox4_32_10_t)) >> GPULDA_CHECK;
+  gpulda::rng_init<<<1,1>>>(0,0,rng);
+  cudaDeviceSynchronize() >> GPULDA_CHECK;
+
   u32* out;
   cudaMalloc(&out, sizeof(u32)) >> GPULDA_CHECK;
   u32 out_host = 0;
 
-  // test draw_wary_search
+  // draw topic via wary search
   test_draw_wary_search<<<1,warpSize>>>(out);
+  cudaDeviceSynchronize() >> GPULDA_CHECK;
+
+  cudaMemcpy(&out_host, out, sizeof(u32), cudaMemcpyDeviceToHost) >> GPULDA_CHECK;
+  assert(out_host == 0);
+
+  // count topics
+  test_count_topics<<<1,warpSize>>>(out, rng);
   cudaDeviceSynchronize() >> GPULDA_CHECK;
 
   cudaMemcpy(&out_host, out, sizeof(u32), cudaMemcpyDeviceToHost) >> GPULDA_CHECK;
