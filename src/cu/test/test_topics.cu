@@ -163,7 +163,6 @@ __global__ void test_compute_product_cumsum(u32* error) {
   // check correctness
   if(lane_idx == 0) {
     for(i32 i = 0; i < size; ++i) {
-      printf("%.6f != %.6f\n", mPhi[i], check[i]);
       if(abs(mPhi[i] - check[i]) > tolerance) {
         error[0] = i+1;
         break;
