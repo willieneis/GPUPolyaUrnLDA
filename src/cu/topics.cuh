@@ -38,7 +38,7 @@ __device__ __forceinline__ u32 draw_alias(f32 u, f32* prob, u32* alias, u32 tabl
       ret = thread_alias;
     }
   }
-  return ret;
+  return __shfl(ret, 0);
 }
 
 
