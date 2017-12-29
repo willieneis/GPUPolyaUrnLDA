@@ -84,6 +84,8 @@ __global__ void test_count_topics(u32* error, curandStatePhilox4_32_10_t* rng) {
   // declare arguments
   constexpr u32 size = 100;
   __shared__ u32 z[size];
+
+  // initialize hashmap
   __shared__ gpulda::HashMap m[1];
   __shared__ u64 data[2*size];
   constexpr u32 ring_buffer_size = 4*3; // number of concurrent elements * 96 bits per concurrent element
@@ -102,7 +104,7 @@ __global__ void test_count_topics(u32* error, curandStatePhilox4_32_10_t* rng) {
   // test count_topics
   gpulda::count_topics(z, size, m, lane_idx);
 
-  // // retrieve values
+  // retrieve values
   for(i32 offset = 0; offset < cutoff / 2 + 1; ++offset) {
     i32 i = offset * 2 + (lane_idx < warpSize/2 ? 0 : 1);
     if(i < cutoff) {
@@ -113,14 +115,63 @@ __global__ void test_count_topics(u32* error, curandStatePhilox4_32_10_t* rng) {
     }
   }
 
-
   // check correctness
   if(lane_idx == 0) {
     for(i32 i = 0; i < cutoff; ++i) {
       if(count[i] != size/cutoff) {
-        error[0] = i;
+        error[0] = i+1;
         break;
       }
+    }
+  }
+}
+
+__global__ void test_compute_product_cumsum(u32* error) {
+  // compute constants
+  i32 lane_idx = threadIdx.x % warpSize;
+  typedef cub::BlockScan<i32, GPULDA_COMPUTE_D_IDX_BLOCKDIM> BlockScan;
+  __shared__ typename cub::WarpScan<f32>::TempStorage warp_scan_temp[1];
+  f32 tolerance = 0.0001f; // large to allow for randomness
+
+  // declare arguments
+  constexpr u32 size = 100;
+  __shared__ f32 Phi_dense[size];
+  __shared__ f32 mPhi[size];
+  __shared__ f32 check[size];
+
+  // populate hashmap data
+  __shared__ gpulda::HashMap m[1];
+  __shared__ u64 data[size];
+  m->size_1 = size;
+  m->data_1 = data;
+  m->state = 2;
+
+  // prepare state
+  u64 empty = m->entry(0, 0, m->null_pointer(), 0, 0);
+  for(i32 offset = 0; offset < size / warpSize + 1; ++offset) {
+    i32 i = offset * warpSize + lane_idx;
+    if(i < size) {
+      Phi_dense[i] = 6.0f * (float) i;
+      data[i] = m->with_key(i, m->with_value(i, empty));
+      check[i] = (i == 0) ? 0.0f : ((float) (i-1)) * (((float) (i-1))+1.0f) * ((2.0f*((float) (i-1)))+1.0f);
+    }
+  }
+
+  // test count_topics
+  f32 total = gpulda::compute_product_cumsum(mPhi, m, Phi_dense, lane_idx, warp_scan_temp);
+
+  // check correctness
+  if(lane_idx == 0) {
+    for(i32 i = 0; i < size; ++i) {
+      printf("%.6f != %.6f\n", mPhi[i], check[i]);
+      if(abs(mPhi[i] - check[i]) > tolerance) {
+        error[0] = i+1;
+        break;
+      }
+    }
+    f32 expected_total = ((float) (size-1)) * (((float) (size-1))+1.0f) * ((2.0f*((float) (size-1)))+1.0f);
+    if(total != expected_total) {
+      error[0] = size+1;
     }
   }
 }
@@ -146,6 +197,13 @@ void test_sample_topics() {
 
   // count topics
   test_count_topics<<<1,warpSize>>>(out, rng);
+  cudaDeviceSynchronize() >> GPULDA_CHECK;
+
+  cudaMemcpy(&out_host, out, sizeof(u32), cudaMemcpyDeviceToHost) >> GPULDA_CHECK;
+  assert(out_host == 0);
+
+  // compute sparse vector product
+  test_compute_product_cumsum<<<1,warpSize>>>(out);
   cudaDeviceSynchronize() >> GPULDA_CHECK;
 
   cudaMemcpy(&out_host, out, sizeof(u32), cudaMemcpyDeviceToHost) >> GPULDA_CHECK;

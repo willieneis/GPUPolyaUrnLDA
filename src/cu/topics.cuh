@@ -128,7 +128,6 @@ __device__ __forceinline__ f32 compute_product_cumsum(f32* mPhi, HashMap* m, f32
   }
 
   f32 initial_value = 0;
-  f32 total_value = 0;
   for(i32 offset = 0; offset < m_size / warpSize + 1; ++offset) {
     i32 i = offset * warpSize + lane_idx;
     u64 m_i = (i < m_size) ? m_data[i] : 0;
@@ -136,6 +135,7 @@ __device__ __forceinline__ f32 compute_product_cumsum(f32* mPhi, HashMap* m, f32
     f32 m_count = (token == m->empty_key()) ? 0.0f : (float) m->value(m_i);
     f32 Phi_count = (token == m->empty_key()) ? 0.0f : Phi_dense[token];
     f32 thread_mPhi = m_count * Phi_count;
+    f32 total_value;
 
     // compute scan
     WarpScan(*temp).ExclusiveScan(thread_mPhi, thread_mPhi, 0, cub::Sum(), total_value);
@@ -149,7 +149,7 @@ __device__ __forceinline__ f32 compute_product_cumsum(f32* mPhi, HashMap* m, f32
       mPhi[i] = thread_mPhi;
     }
   }
-  return total_value;
+  return initial_value;
 }
 
 }
