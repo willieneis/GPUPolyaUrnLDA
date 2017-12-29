@@ -60,12 +60,15 @@ __device__ __forceinline__ u32 draw_wary_search(f32 u, HashMap* m, f32* mPhi, f3
   if(lane_idx < warpSize/2) {
     // perform search
     i32 left = 0;
-    i32 right = size/16;
+    i32 right = (size-1)/16;
     f32 target = u * sigma_b;
     i32 index;
     f32 thread_mPhi;
     do {
       index = (left + right) / 2;
+      if(abs(left-right)==1) {
+        index++;
+      }
       thread_mPhi = mPhi[(16*index) + lane_idx];
       u32 up = __ballot(target > thread_mPhi);
       u32 down = __ballot(target < thread_mPhi);
@@ -82,7 +85,7 @@ __device__ __forceinline__ u32 draw_wary_search(f32 u, HashMap* m, f32* mPhi, f3
     // retreive keys and determine value
     u64 thread_data = data[(16*index) + lane_idx];
     u32 lane_found = __ballot(target > thread_mPhi);
-    thread_key = __shfl(m->key(thread_data), __ffs(lane_found) - 1);
+    thread_key = __shfl(m->key(thread_data), __ffs(lane_found)); // __ffs is 1-indexed, missing "-1" not a bug
   }
 
   return __shfl(thread_key, 0);
