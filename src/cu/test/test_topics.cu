@@ -47,8 +47,8 @@ void test_compute_d_idx() {
 
 __global__ void test_draw_wary_search(u32* error) {
   i32 lane_idx = threadIdx.x % warpSize;
-  f32 u = 0.1;
-  constexpr i32 size = 10;
+  f32 u = 0.2f;
+  constexpr i32 size = 96; // Need: 16 * something?
   __shared__ gpulda::HashMap m[1];
   __shared__ u64 data[size];
   m->size_1 = size;
