@@ -234,7 +234,7 @@ __global__ void test_compute_product_cumsum(u32* error) {
   }
 }
 
-void test_sample_topics() {
+void test_sample_topics_functions() {
   constexpr u32 warpSize = 32;
 
   curandStatePhilox4_32_10_t* rng;
@@ -273,6 +273,10 @@ void test_sample_topics() {
 
   cudaMemcpy(&out_host, out, sizeof(u32), cudaMemcpyDeviceToHost) >> GPULDA_CHECK;
   assert(out_host == 0);
+
+}
+
+void test_sample_topics() {
 
 }
 

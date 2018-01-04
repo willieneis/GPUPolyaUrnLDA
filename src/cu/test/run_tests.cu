@@ -33,6 +33,8 @@ void run_tests() {
 
   std::cout << "testing compute_d_idx" << std::endl;
   test_compute_d_idx();
+  std::cout << "testing sample_topics_functions" << std::endl;
+  test_sample_topics_functions();
   std::cout << "testing sample_topics" << std::endl;
   test_sample_topics();
 
