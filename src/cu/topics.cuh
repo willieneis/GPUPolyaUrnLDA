@@ -68,9 +68,6 @@ __device__ __forceinline__ u32 draw_wary_search(f32 u, HashMap* m, f32* mPhi, f3
     f32 thread_mPhi;
     do {
       index = (left + right) / 2;
-      if(abs(left-right)==1) {
-        index++;
-      }
       thread_mPhi = mPhi[(16*index) + lane_idx];
       up = __ballot(target > thread_mPhi);
       down = __ballot(target < thread_mPhi);
@@ -84,9 +81,16 @@ __device__ __forceinline__ u32 draw_wary_search(f32 u, HashMap* m, f32* mPhi, f3
       }
     } while(left != right);
 
+    printf("left:%d,target:%.06f,thread_mPhi:%.06f\n",left,target,thread_mPhi);
+
     // retreive keys and determine value
-    u64 thread_data = data[(16*index) + lane_idx];
+    u64 thread_data = data[(16*left) + lane_idx];
     u32 lane_found = __ballot(target > thread_mPhi);
+    if(lane_found == 0x80000000) {
+      // edge case: don't try to read from lane 32 using 0-based index
+      thread_data = data[16*(left+1)];
+      lane_found = 0;
+    }
     thread_key = __shfl(m->key(thread_data), __ffs(lane_found)); // __ffs is 1-indexed, missing "-1" not a bug
   }
 

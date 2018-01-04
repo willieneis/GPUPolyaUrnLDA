@@ -100,7 +100,7 @@ __global__ void test_draw_wary_search(u32* error) {
   u32 topic = gpulda::draw_wary_search(u, m, mPhi, sigma_b, lane_idx);
 
   if(lane_idx==0 && topic!=9){
-   error[0] = 1;
+    error[0] = 1;
   }
 }
 
