@@ -38,7 +38,7 @@ __device__ __forceinline__ u32 draw_alias(f32 u, f32* prob, u32* alias, u32 tabl
       ret = thread_alias;
     }
   }
-  return ret;
+  return __shfl(ret, 0);
 }
 
 
@@ -63,28 +63,34 @@ __device__ __forceinline__ u32 draw_wary_search(f32 u, HashMap* m, f32* mPhi, f3
     i32 right = (size-1)/16;
     f32 target = u * sigma_b;
     i32 index;
+    u32 up;
+    u32 down;
     f32 thread_mPhi;
     do {
       index = (left + right) / 2;
-      if(abs(left-right)==1) {
-        index++;
-      }
       thread_mPhi = mPhi[(16*index) + lane_idx];
-      u32 up = __ballot(target > thread_mPhi);
-      u32 down = __ballot(target < thread_mPhi);
+      up = __ballot(target > thread_mPhi);
+      down = __ballot(target < thread_mPhi);
       if(__popc(up) == warpSize/2) {
-        right = index;
+        left = index + 1;
       } else if(__popc(down) == warpSize/2) {
-        left = index;
+        right = index - 1;
       } else {
         left = index;
         right = index;
       }
     } while(left != right);
 
+    printf("left:%d,target:%.06f,thread_mPhi:%.06f\n",left,target,thread_mPhi);
+
     // retreive keys and determine value
-    u64 thread_data = data[(16*index) + lane_idx];
+    u64 thread_data = data[(16*left) + lane_idx];
     u32 lane_found = __ballot(target > thread_mPhi);
+    if(lane_found == 0x80000000) {
+      // edge case: don't try to read from lane 32 using 0-based index
+      thread_data = data[16*(left+1)];
+      lane_found = 0;
+    }
     thread_key = __shfl(m->key(thread_data), __ffs(lane_found)); // __ffs is 1-indexed, missing "-1" not a bug
   }
 
@@ -131,7 +137,6 @@ __device__ __forceinline__ f32 compute_product_cumsum(f32* mPhi, HashMap* m, f32
   }
 
   f32 initial_value = 0;
-  f32 total_value = 0;
   for(i32 offset = 0; offset < m_size / warpSize + 1; ++offset) {
     i32 i = offset * warpSize + lane_idx;
     u64 m_i = (i < m_size) ? m_data[i] : 0;
@@ -139,6 +144,7 @@ __device__ __forceinline__ f32 compute_product_cumsum(f32* mPhi, HashMap* m, f32
     f32 m_count = (token == m->empty_key()) ? 0.0f : (float) m->value(m_i);
     f32 Phi_count = (token == m->empty_key()) ? 0.0f : Phi_dense[token];
     f32 thread_mPhi = m_count * Phi_count;
+    f32 total_value;
 
     // compute scan
     WarpScan(*temp).ExclusiveScan(thread_mPhi, thread_mPhi, 0, cub::Sum(), total_value);
@@ -152,7 +158,7 @@ __device__ __forceinline__ f32 compute_product_cumsum(f32* mPhi, HashMap* m, f32
       mPhi[i] = thread_mPhi;
     }
   }
-  return total_value;
+  return initial_value;
 }
 
 }
