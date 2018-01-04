@@ -107,22 +107,28 @@ __global__ void test_draw_wary_search(u32* error) {
     error[0] = 2;
   }
 
-  // test edge case: last entry in first slot, search ends in second slot
+  // test edge case 1: last entry in first slot, search ends in second slot
   topic = gpulda::draw_wary_search(0.16f, m, mPhi, sigma_b, lane_idx);
   if(lane_idx==0 && topic!=15){
     error[0] = 3;
   }
 
-  // test standard case: second-to-last entry in last slot
-  topic = gpulda::draw_wary_search(0.985f, m, mPhi, sigma_b, lane_idx);
-  if(lane_idx==0 && topic!=94){
+  // test standard case: value in middle of slot
+  topic = gpulda::draw_wary_search(0.4f, m, mPhi, sigma_b, lane_idx);
+  if(lane_idx==0 && topic!=38){
     error[0] = 4;
   }
 
-  // test edge case: last entry in last slot
+  // test standard case: second-to-last entry in last slot
+  topic = gpulda::draw_wary_search(0.985f, m, mPhi, sigma_b, lane_idx);
+  if(lane_idx==0 && topic!=94){
+    error[0] = 5;
+  }
+
+  // test edge case 2: last entry in last slot
   topic = gpulda::draw_wary_search(1.0f, m, mPhi, sigma_b, lane_idx);
   if(lane_idx==0 && topic!=95){
-    error[0] = 5;
+    error[0] = 6;
   }
 }
 
