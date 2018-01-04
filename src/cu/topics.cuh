@@ -62,13 +62,11 @@ __device__ __forceinline__ u32 draw_wary_search(f32 u, HashMap* m, f32* mPhi, f3
     i32 left = 0;
     i32 right = (size-1)/16;
     f32 target = u * sigma_b;
-    i32 index;
     u32 up;
     u32 down;
-    f32 thread_mPhi;
+    i32 index = (left + right)/2;
+    f32 thread_mPhi = mPhi[(16*index) + lane_idx];
     do {
-      index = (left + right) / 2;
-      thread_mPhi = mPhi[(16*index) + lane_idx];
       up = __ballot(target > thread_mPhi);
       down = __ballot(target < thread_mPhi);
       if(__popc(up) == warpSize/2) {
@@ -79,19 +77,30 @@ __device__ __forceinline__ u32 draw_wary_search(f32 u, HashMap* m, f32* mPhi, f3
         left = index;
         right = index;
       }
+      index = (left + right) / 2;
+      thread_mPhi = mPhi[(16*index) + lane_idx];
     } while(left != right);
 
-    printf("left:%d,target:%.06f,thread_mPhi:%.06f\n",left,target,thread_mPhi);
+    /*printf("left:%d,target:%.06f,thread_mPhi:%.06f\n",left,target,thread_mPhi);*/
 
     // retreive keys and determine value
     u64 thread_data = data[(16*left) + lane_idx];
-    u32 lane_found = __ballot(target > thread_mPhi);
+    //
+    printf("TARGET IS: %0.6f\n",target);
+    printf("thread_mPhi IS: %0.6f\n",thread_mPhi);
+    printf("lane_idx IS: %d\n",lane_idx);
+    printf("Comparison thread_mPhi > target: %d\n", thread_mPhi > target);
+    //
+    u32 lane_found = __ballot(thread_mPhi > target);
+    printf("LANE FOUND: %d\n",__ffs(lane_found));
     if(lane_found == 0x80000000) {
       // edge case: don't try to read from lane 32 using 0-based index
       thread_data = data[16*(left+1)];
       lane_found = 0;
+      printf("INSIDE EDGE CASE\n");
     }
-    thread_key = __shfl(m->key(thread_data), __ffs(lane_found)); // __ffs is 1-indexed, missing "-1" not a bug
+    /*thread_key = __shfl(m->key(thread_data), __ffs(lane_found)); // __ffs is 1-indexed, missing "-1" not a bug*/
+    thread_key = __shfl(m->key(thread_data), __ffs(lane_found)-1); // __ffs is 1-indexed
   }
 
   return __shfl(thread_key, 0);

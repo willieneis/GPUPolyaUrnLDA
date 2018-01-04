@@ -78,7 +78,9 @@ __global__ void test_draw_alias(u32* error) {
 
 __global__ void test_draw_wary_search(u32* error) {
   i32 lane_idx = threadIdx.x % warpSize;
-  f32 u = 0.2f;
+  f32 u = 0.9f;
+  /*f32 u = 0.0f;*/
+  /*f32 u = 1.0f;*/
   constexpr i32 size = 96; // Need: 16 * something?
   __shared__ gpulda::HashMap m[1];
   __shared__ u64 data[size];
@@ -93,11 +95,13 @@ __global__ void test_draw_wary_search(u32* error) {
     i32 i = offset * warpSize + lane_idx;
     if(i<size) {
       data[i] = m->with_key(i, empty);
+      /*printf("mPhi val: %0.6f\n", ((float)i) * sigma_b / ((float)size));*/
       mPhi[i] = ((float)i) * sigma_b / ((float)size);
     }
   }
 
   u32 topic = gpulda::draw_wary_search(u, m, mPhi, sigma_b, lane_idx);
+  printf("Topic is: %d\n", topic);
 
   if(lane_idx==0 && topic!=9){
     error[0] = 1;
