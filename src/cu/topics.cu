@@ -38,8 +38,8 @@ __global__ void compute_d_idx(u32* d_len, u32* d_idx, u32 n_docs) {
 __global__ void sample_topics(u32 size, u32 n_docs,
     u32* z, u32* w, u32* d_len, u32* d_idx, u32* K_d, u64* hash, f32* mPhi,
     u32 K, u32 V, u32 max_N_d,
-    f32* Phi_dense,
-    f32** prob, u32** alias, curandStatePhilox4_32_10_t* rng) {
+    f32* Phi_dense, f32* sigma_a,
+    f32** prob, u32** alias, u32 table_size, curandStatePhilox4_32_10_t* rng) {
   // initialize variables
   i32 lane_idx = threadIdx.x % warpSize;
   // i32 warp_idx = threadIdx.x / warpSize;
@@ -68,7 +68,7 @@ __global__ void sample_topics(u32 size, u32 n_docs,
       m->insert2(warp_z, lane_idx < 16 ? -1 : 0); // don't branch
 
       // compute m*phi and sigma_b
-      f32 warp_sigma_a = 0.0f;
+      f32 warp_sigma_a = sigma_a[warp_w];
       f32 sigma_b = compute_product_cumsum(mPhi, m, Phi_dense, lane_idx, warp_scan_temp);
 
       // update z
@@ -79,7 +79,7 @@ __global__ void sample_topics(u32 size, u32 n_docs,
         warp_z = draw_wary_search(u2, m, mPhi, sigma_b, lane_idx);
       } else {
         // sample from alias table
-        warp_z = draw_alias(u2, prob[warp_w], alias[warp_w], /*table_size =*/1, lane_idx);
+        warp_z = draw_alias(u2, prob[warp_w], alias[warp_w], table_size, lane_idx); // TODO: fix this
       }
 
       // add new z to sufficient statistic

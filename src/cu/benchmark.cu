@@ -13,8 +13,8 @@ using gpulda::u64;
 int main(void) {
   gpulda_test::run_tests();
 
-  constexpr f32 alpha = 0.1;
-  constexpr f32 beta = 0.1;
+  constexpr f32 alpha = 0.1f;
+  constexpr f32 beta = 0.1f;
   constexpr u32 V = 5;
   constexpr u32 K = 10;
   u32 C[V] = {1,1,1,1,1};
