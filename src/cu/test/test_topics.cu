@@ -84,14 +84,13 @@ __global__ void test_draw_wary_search(u32* error) {
   m->data_1 = data;
   m->state = 2;
   __shared__ f32 mPhi[size];
-  f32 sigma_b = 75.0f;
+  f32 sigma_b = 50.0f;
 
   u64 empty = m->entry(0, 0, m->null_pointer(), 0, 0);
   for(i32 offset = 0; offset < size / warpSize + 1; ++offset) {
     i32 i = offset * warpSize + lane_idx;
     if(i<size) {
       data[i] = m->with_key(i, empty);
-      /*printf("mPhi val: %0.6f\n", ((float)i) * sigma_b / ((float)size));*/
       mPhi[i] = ((float)i) * sigma_b / ((float)size);
     }
   }

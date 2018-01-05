@@ -91,7 +91,7 @@ __device__ __forceinline__ u32 draw_wary_search(f32 u, HashMap* m, f32* mPhi, f3
       read_idx = 15;
     } else if(lane_found & 1 == 1) {
       // edge case 2: go back a slot, read from last thread
-      thread_data = data[16*min(0, left - 1) + lane_idx];
+      thread_data = data[16*(left - 1) + lane_idx]; // no need for min, slot 0 doesn't go into this edge case
       read_idx = 15;
     }
     thread_key = __shfl(m->key(thread_data), read_idx);
