@@ -1,5 +1,6 @@
 #include "test_topics.cuh"
 #include "../topics.cuh"
+#include "../train.cuh"
 #include "../random.cuh"
 #include "../error.cuh"
 #include "assert.h"
@@ -274,10 +275,69 @@ void test_sample_topics_functions() {
   cudaMemcpy(&out_host, out, sizeof(u32), cudaMemcpyDeviceToHost) >> GPULDA_CHECK;
   assert(out_host == 0);
 
+  // cleanup
+  cudaFree(rng);
+  cudaFree(out);
 }
 
 void test_sample_topics() {
+  constexpr u32 warpSize = 32;
 
+  constexpr f32 alpha = 0.1f;
+  constexpr f32 beta = 0.1f;
+  constexpr u32 V = 3;
+  constexpr u32 K = 5;
+  u32 C[V] = {1,1,1};
+  constexpr u32 buffer_size = 5;
+  constexpr u32 max_D = 2;
+  constexpr u32 hashmap_size = 96;
+  constexpr u32 max_N_d = hashmap_size;
+
+  gpulda::Args args = {alpha,beta,K,V,C,buffer_size,max_D,max_N_d};
+  u32 z[buffer_size] = {4,1,0,4,0};
+  u32 w[buffer_size] = {0,0,0,0,0};
+  u32 d[max_D] = {3,2};
+  u32 K_d[max_D] = {1,1};
+  u32 n_docs = max_D;
+  gpulda::Buffer buffer = {z, w, d, K_d, n_docs, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+
+  gpulda::initialize(&args, &buffer, 1);
+
+  // initialize test-specific Phi
+  f32 Phi_host[K*V] = { 0.98f, 0.02f, 0.02f, 0.02f, 0.02f,
+                        0.01f, 0.49f, 0.49f, 0.49f, 0.49f,
+                        0.01f, 0.49f, 0.49f, 0.49f, 0.49f };
+  f32* Phi_dense;
+  cudaMalloc(&Phi_dense, K*V*sizeof(f32)) >> GPULDA_CHECK;
+  cudaMemcpy(Phi_dense, Phi_host, K*V*sizeof(f32), cudaMemcpyHostToDevice) >> GPULDA_CHECK;
+
+  // initialize test-specific sigma_a
+  f32 sigma_a_host[V] = { 0.0f, 0.0f, 0.0f };
+  f32* sigma_a;
+  cudaMalloc(&sigma_a, V*sizeof(f32)) >> GPULDA_CHECK;
+  cudaMemcpy(sigma_a, sigma_a_host, V*sizeof(f32), cudaMemcpyHostToDevice) >> GPULDA_CHECK;
+
+  // copy z,w,d to buffer
+  cudaMemcpy(buffer.gpu_z, z, buffer_size*sizeof(u32), cudaMemcpyHostToDevice) >> GPULDA_CHECK;
+  cudaMemcpy(buffer.gpu_w, w, buffer_size*sizeof(u32), cudaMemcpyHostToDevice) >> GPULDA_CHECK;
+  cudaMemcpy(buffer.gpu_d_len, d, n_docs*sizeof(u32), cudaMemcpyHostToDevice) >> GPULDA_CHECK;
+  cudaMemcpy(buffer.gpu_K_d, K_d, n_docs*sizeof(u32), cudaMemcpyHostToDevice) >> GPULDA_CHECK;
+  gpulda::compute_d_idx<<<1,warpSize>>>(buffer.gpu_d_len, buffer.gpu_d_idx, n_docs);
+  cudaDeviceSynchronize() >> GPULDA_CHECK;
+
+  // sample a topic indicator
+  gpulda::sample_topics<<<1,warpSize>>>(args.buffer_size, buffer.n_docs, buffer.gpu_z, buffer.gpu_w, buffer.gpu_d_len, buffer.gpu_d_idx, buffer.gpu_K_d, buffer.gpu_hash, buffer.gpu_temp, args.K, args.V, args.max_N_d, Phi_dense, sigma_a, NULL, NULL, 0, buffer.gpu_rng);
+  cudaDeviceSynchronize() >> GPULDA_CHECK;
+
+  cudaMemcpy(z, buffer.gpu_z, buffer_size*sizeof(u32), cudaMemcpyDeviceToHost) >> GPULDA_CHECK;
+  for(i32 i = 0; i < buffer_size; ++i) {
+    assert(z[i] == 0);
+  }
+
+  // cleanup
+  cudaFree(Phi_dense);
+  cudaFree(sigma_a);
+  gpulda::cleanup(&buffer, 1);
 }
 
 }
