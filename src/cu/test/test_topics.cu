@@ -63,14 +63,12 @@ __global__ void test_draw_alias(u32* error) {
 
   // draw from prob
   u32 topic = gpulda::draw_alias(0.6, prob, alias, size, lane_idx);
-
   if(lane_idx==0 && topic!=3){
     error[0] = 1;
   }
 
   // draw from alias
   topic = gpulda::draw_alias(0.75, prob, alias, size, lane_idx);
-
   if(lane_idx==0 && topic!=1){
     error[0] = 2;
   }
@@ -78,9 +76,6 @@ __global__ void test_draw_alias(u32* error) {
 
 __global__ void test_draw_wary_search(u32* error) {
   i32 lane_idx = threadIdx.x % warpSize;
-  f32 u = 0.9f;
-  /*f32 u = 0.0f;*/
-  /*f32 u = 1.0f;*/
   constexpr i32 size = 96; // Need: 16 * something?
   __shared__ gpulda::HashMap m[1];
   __shared__ u64 data[size];
@@ -100,11 +95,40 @@ __global__ void test_draw_wary_search(u32* error) {
     }
   }
 
-  u32 topic = gpulda::draw_wary_search(u, m, mPhi, sigma_b, lane_idx);
-  printf("Topic is: %d\n", topic);
-
-  if(lane_idx==0 && topic!=9){
+  // test standard case: first entry in first slot
+  u32 topic = gpulda::draw_wary_search(0.0f, m, mPhi, sigma_b, lane_idx);
+  if(lane_idx==0 && topic!=0){
     error[0] = 1;
+  }
+
+  // test standard case: second entry in first slot
+  topic = gpulda::draw_wary_search(0.02f, m, mPhi, sigma_b, lane_idx);
+  if(lane_idx==0 && topic!=1){
+    error[0] = 2;
+  }
+
+  // test edge case 1: last entry in first slot, search ends in second slot
+  topic = gpulda::draw_wary_search(0.16f, m, mPhi, sigma_b, lane_idx);
+  if(lane_idx==0 && topic!=15){
+    error[0] = 3;
+  }
+
+  // test standard case: value in middle of slot
+  topic = gpulda::draw_wary_search(0.4f, m, mPhi, sigma_b, lane_idx);
+  if(lane_idx==0 && topic!=38){
+    error[0] = 4;
+  }
+
+  // test standard case: second-to-last entry in last slot
+  topic = gpulda::draw_wary_search(0.985f, m, mPhi, sigma_b, lane_idx);
+  if(lane_idx==0 && topic!=94){
+    error[0] = 5;
+  }
+
+  // test edge case 2: last entry in last slot
+  topic = gpulda::draw_wary_search(1.0f, m, mPhi, sigma_b, lane_idx);
+  if(lane_idx==0 && topic!=95){
+    error[0] = 6;
   }
 }
 
@@ -210,7 +234,7 @@ __global__ void test_compute_product_cumsum(u32* error) {
   }
 }
 
-void test_sample_topics() {
+void test_sample_topics_functions() {
   constexpr u32 warpSize = 32;
 
   curandStatePhilox4_32_10_t* rng;
@@ -249,6 +273,10 @@ void test_sample_topics() {
 
   cudaMemcpy(&out_host, out, sizeof(u32), cudaMemcpyDeviceToHost) >> GPULDA_CHECK;
   assert(out_host == 0);
+
+}
+
+void test_sample_topics() {
 
 }
 

@@ -81,26 +81,20 @@ __device__ __forceinline__ u32 draw_wary_search(f32 u, HashMap* m, f32* mPhi, f3
       thread_mPhi = mPhi[(16*index) + lane_idx];
     } while(left != right);
 
-    /*printf("left:%d,target:%.06f,thread_mPhi:%.06f\n",left,target,thread_mPhi);*/
-
     // retreive keys and determine value
     u64 thread_data = data[(16*left) + lane_idx];
-    //
-    printf("TARGET IS: %0.6f\n",target);
-    printf("thread_mPhi IS: %0.6f\n",thread_mPhi);
-    printf("lane_idx IS: %d\n",lane_idx);
-    printf("Comparison thread_mPhi > target: %d\n", thread_mPhi > target);
-    //
     u32 lane_found = __ballot(thread_mPhi > target);
-    printf("LANE FOUND: %d\n",__ffs(lane_found));
-    if(lane_found == 0x80000000) {
-      // edge case: don't try to read from lane 32 using 0-based index
-      thread_data = data[16*(left+1)];
-      lane_found = 0;
-      printf("INSIDE EDGE CASE\n");
+    i32 read_idx = __ffs(lane_found)-2; // -2 because 1-based, and we want the last thread below threshold, not first one above
+
+    if(lane_found == 0) {
+      // edge case 1: read from last thread
+      read_idx = 15;
+    } else if(lane_found & 1 == 1) {
+      // edge case 2: go back a slot, read from last thread
+      thread_data = data[16*min(0, left - 1) + lane_idx];
+      read_idx = 15;
     }
-    /*thread_key = __shfl(m->key(thread_data), __ffs(lane_found)); // __ffs is 1-indexed, missing "-1" not a bug*/
-    thread_key = __shfl(m->key(thread_data), __ffs(lane_found)-1); // __ffs is 1-indexed
+    thread_key = __shfl(m->key(thread_data), read_idx);
   }
 
   return __shfl(thread_key, 0);
