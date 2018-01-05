@@ -257,7 +257,7 @@ struct HashMap {
 
 
 
-  __device__ inline void init(u64* in_data, u32 in_data_size, u32 initial_size, u32* in_buffer, u32 in_buffer_size, curandStatePhilox4_32_10_t* in_rng, i32 dim) {
+  __device__ inline void init(u64* in_data, u32 in_data_size, u32 initial_size, u64* in_buffer, u32* in_buffer_queue, u32 in_buffer_size, curandStatePhilox4_32_10_t* in_rng, i32 dim) {
     // calculate initialization variables common for all threads
     i32 thread_idx = threadIdx.x % dim;
     u64 empty_entry = entry(false, false, null_pointer(), empty_key(), 0);
@@ -271,10 +271,10 @@ struct HashMap {
     u64* temp_data = data + max_size; // no sizeof for typed pointer arithmetic
 
     // perform pointer arithmetic for buffer
-    u32 num_concurrent = in_buffer_size / 6; // 2 per thread, 96 bits per element
+    u32 num_concurrent = in_buffer_size / 2; // 2 per thread
     u32 buffer_size = num_concurrent * 2;
-    u64* buffer = (u64*) in_buffer; // 64-bit array of size num_concurrent_elements values
-    u32* queue = (u32*) (in_buffer + buffer_size); // 32-bit array of size num_concurrent_elements values
+    u64* buffer = in_buffer; // 64-bit array of size num_concurrent_elements values
+    u32* queue = in_buffer_queue; // 32-bit array of size num_concurrent_elements values
     ring_buffer_init(buffer, queue, buffer_size, dim);
 
     // set map to empty

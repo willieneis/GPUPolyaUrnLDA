@@ -147,9 +147,10 @@ __global__ void test_count_topics(u32* error, curandStatePhilox4_32_10_t* rng) {
   // initialize hashmap
   __shared__ gpulda::HashMap m[1];
   __shared__ u64 data[2*size];
-  constexpr u32 ring_buffer_size = 4*3; // number of concurrent elements * 96 bits per concurrent element
-  __shared__ u32 ring_buffer[ring_buffer_size];
-  m->init(data, 2*size, size, ring_buffer, ring_buffer_size, &warp_rng, warpSize);
+  constexpr u32 ring_buffer_size = (GPULDA_SAMPLE_TOPICS_BLOCKDIM/16)*2;
+  __shared__ u64 ring_buffer[ring_buffer_size];
+  __shared__ u32 ring_buffer_queue[ring_buffer_size];
+  m->init(data, 2*size, size, ring_buffer, ring_buffer_queue, ring_buffer_size, &thread_rng, blockDim.x);
   __syncthreads();
 
   // prepare state

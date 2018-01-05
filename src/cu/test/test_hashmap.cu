@@ -14,9 +14,10 @@ namespace gpulda_test {
 
 __global__ void test_hash_map_init(u64* map_storage, u32 total_map_size, u32 initial_size, u32* map_returned_size, curandStatePhilox4_32_10_t* rng) {
   __shared__ gpulda::HashMap m[1];
-  constexpr u32 ring_buffer_size = ((GPULDA_POLYA_URN_SAMPLE_BLOCKDIM / 16) * 2) * 3;
-  __shared__ u32 ring_buffer[ring_buffer_size];
-  m->init(map_storage, total_map_size, initial_size, ring_buffer, ring_buffer_size, rng, blockDim.x);
+  constexpr u32 ring_buffer_size = (GPULDA_POLYA_URN_SAMPLE_BLOCKDIM / 16) * 2;
+  __shared__ u64 ring_buffer[ring_buffer_size];
+  __shared__ u32 ring_buffer_queue[ring_buffer_size];
+  m->init(map_storage, total_map_size, initial_size, ring_buffer, ring_buffer_queue, ring_buffer_size, rng, blockDim.x);
   __syncthreads();
 
   if(threadIdx.x == 0) {
@@ -28,9 +29,10 @@ __global__ void test_hash_map_insert_print_steps(u64* map_storage, curandStatePh
   #ifdef GPULDA_HASH_DEBUG
   // initialize
   __shared__ gpulda::HashMap m[1];
-  constexpr u32 ring_buffer_size = ((GPULDA_POLYA_URN_SAMPLE_BLOCKDIM / 16) * 2) * 3;
-  __shared__ u32 ring_buffer[ring_buffer_size];
-  m->init(map_storage, 96*2, 96, ring_buffer, ring_buffer_size, rng, blockDim.x);
+  constexpr u32 ring_buffer_size = (GPULDA_POLYA_URN_SAMPLE_BLOCKDIM / 16) * 2;
+  __shared__ u64 ring_buffer[ring_buffer_size];
+  __shared__ u32 ring_buffer_queue[ring_buffer_size];
+  m->init(map_storage, 96*2, 96, ring_buffer, ring_buffer_queue, ring_buffer_size, rng, blockDim.x);
   m->a_1=26; m->b_1=1; m->c_1=30; m->d_1=13;
   __syncthreads();
 
@@ -90,9 +92,10 @@ __global__ void test_hash_map_insert_print_steps(u64* map_storage, curandStatePh
 __global__ void test_hash_map_insert_phase_1_search(u64* map_storage, u32* error, curandStatePhilox4_32_10_t* rng) {
   // initialize
   __shared__ gpulda::HashMap m[1];
-  constexpr u32 ring_buffer_size = ((GPULDA_POLYA_URN_SAMPLE_BLOCKDIM / 16) * 2) * 3;
-  __shared__ u32 ring_buffer[ring_buffer_size];
-  m->init(map_storage, 96*2, 96, ring_buffer, ring_buffer_size, rng, blockDim.x);
+  constexpr u32 ring_buffer_size = (GPULDA_POLYA_URN_SAMPLE_BLOCKDIM / 16) * 2;
+  __shared__ u64 ring_buffer[ring_buffer_size];
+  __shared__ u32 ring_buffer_queue[ring_buffer_size];
+  m->init(map_storage, 96*2, 96, ring_buffer, ring_buffer_queue, ring_buffer_size, rng, blockDim.x);
   m->a_1=26; m->b_1=1; m->c_1=30; m->d_1=13;
   u64 empty = m->entry(false, false, m->null_pointer(), m->empty_key(), 0);
   __syncthreads();
@@ -214,9 +217,10 @@ __global__ void test_hash_map_insert_phase_1_search(u64* map_storage, u32* error
 __global__ void test_hash_map_insert_phase_1(u64* map_storage, u32* error, curandStatePhilox4_32_10_t* rng) {
   // initialize
   __shared__ gpulda::HashMap m[1];
-  constexpr u32 ring_buffer_size = ((GPULDA_POLYA_URN_SAMPLE_BLOCKDIM / 16) * 2) * 3;
-  __shared__ u32 ring_buffer[ring_buffer_size];
-  m->init(map_storage, 96*2, 96, ring_buffer, ring_buffer_size, rng, blockDim.x);
+  constexpr u32 ring_buffer_size = (GPULDA_POLYA_URN_SAMPLE_BLOCKDIM / 16) * 2;
+  __shared__ u64 ring_buffer[ring_buffer_size];
+  __shared__ u32 ring_buffer_queue[ring_buffer_size];
+  m->init(map_storage, 96*2, 96, ring_buffer, ring_buffer_queue, ring_buffer_size, rng, blockDim.x);
   m->a_1=26; m->b_1=1; m->c_1=30; m->d_1=13;
   u64 empty = m->entry(false, false, m->null_pointer(), m->empty_key(), 0);
   __syncthreads();
@@ -335,9 +339,10 @@ __global__ void test_hash_map_insert_phase_2_determine_index(u64* map_storage, u
 
   // initialize
   __shared__ gpulda::HashMap m[1];
-  constexpr u32 ring_buffer_size = ((GPULDA_POLYA_URN_SAMPLE_BLOCKDIM / 16) * 2) * 3;
-  __shared__ u32 ring_buffer[ring_buffer_size];
-  m->init(map_storage, 96*2, 96, ring_buffer, ring_buffer_size, rng, blockDim.x);
+  constexpr u32 ring_buffer_size = (GPULDA_POLYA_URN_SAMPLE_BLOCKDIM / 16) * 2;
+  __shared__ u64 ring_buffer[ring_buffer_size];
+  __shared__ u32 ring_buffer_queue[ring_buffer_size];
+  m->init(map_storage, 96*2, 96, ring_buffer, ring_buffer_queue, ring_buffer_size, rng, blockDim.x);
   m->a_1=26; m->b_1=1; m->c_1=30; m->d_1=13;
   __syncthreads();
 
@@ -427,9 +432,10 @@ __global__ void test_hash_map_insert_phase_2_determine_stage_search(u64* map_sto
 
   // initialize
   __shared__ gpulda::HashMap m[1];
-  constexpr u32 ring_buffer_size = ((GPULDA_POLYA_URN_SAMPLE_BLOCKDIM / 16) * 2) * 3;
-  __shared__ u32 ring_buffer[ring_buffer_size];
-  m->init(map_storage, 96*2, 96, ring_buffer, ring_buffer_size, rng, blockDim.x);
+  constexpr u32 ring_buffer_size = (GPULDA_POLYA_URN_SAMPLE_BLOCKDIM / 16) * 2;
+  __shared__ u64 ring_buffer[ring_buffer_size];
+  __shared__ u32 ring_buffer_queue[ring_buffer_size];
+  m->init(map_storage, 96*2, 96, ring_buffer, ring_buffer_queue, ring_buffer_size, rng, blockDim.x);
   m->a_1=26; m->b_1=1; m->c_1=30; m->d_1=13;
   __syncthreads();
   half_warp_entry = m->entry(false,false, m->null_pointer(), 0, 1);
@@ -593,9 +599,10 @@ __global__ void test_hash_map_insert_phase_2_determine_stage_search(u64* map_sto
 __global__ void test_hash_map_insert_phase_2_determine_stage(u64* map_storage, u32* error, curandStatePhilox4_32_10_t* rng) {
   // initialize
   __shared__ gpulda::HashMap m[1];
-  constexpr u32 ring_buffer_size = ((GPULDA_POLYA_URN_SAMPLE_BLOCKDIM / 16) * 2) * 3;
-  __shared__ u32 ring_buffer[ring_buffer_size];
-  m->init(map_storage, 96*2, 96, ring_buffer, ring_buffer_size, rng, blockDim.x);
+  constexpr u32 ring_buffer_size = (GPULDA_POLYA_URN_SAMPLE_BLOCKDIM / 16) * 2;
+  __shared__ u64 ring_buffer[ring_buffer_size];
+  __shared__ u32 ring_buffer_queue[ring_buffer_size];
+  m->init(map_storage, 96*2, 96, ring_buffer, ring_buffer_queue, ring_buffer_size, rng, blockDim.x);
   m->a_1=26; m->b_1=1; m->c_1=30; m->d_1=13;
   u64 empty = m->entry(false, false, m->null_pointer(), m->empty_key(), 0);
   __syncthreads();
@@ -800,9 +807,10 @@ __global__ void test_hash_map_insert_phase_2_determine_stage(u64* map_storage, u
 __global__ void test_hash_map_insert2(u64* map_storage, u32 total_map_size, u32 num_unique_elements, u32 num_elements, u32 max_size, u32* out, curandStatePhilox4_32_10_t* rng, i32 rebuild) {
   __shared__ gpulda::HashMap m[1];
   u32 initial_size = rebuild ? num_elements : max_size;
-  constexpr u32 ring_buffer_size = ((GPULDA_POLYA_URN_SAMPLE_BLOCKDIM / 16) * 2) * 3;
-  __shared__ u32 ring_buffer[ring_buffer_size];
-  m->init(map_storage, total_map_size, initial_size, ring_buffer, ring_buffer_size, rng, blockDim.x);
+  constexpr u32 ring_buffer_size = (GPULDA_POLYA_URN_SAMPLE_BLOCKDIM / 16) * 2;
+  __shared__ u64 ring_buffer[ring_buffer_size];
+  __shared__ u32 ring_buffer_queue[ring_buffer_size];
+  m->init(map_storage, total_map_size, initial_size, ring_buffer, ring_buffer_queue, ring_buffer_size, rng, blockDim.x);
   i32 dim = blockDim.x / (warpSize / 2);
   i32 half_warp_idx = threadIdx.x / (warpSize / 2);
   i32 lane_idx = threadIdx.x % warpSize;

@@ -45,8 +45,6 @@ __global__ void sample_topics(u32 size, u32 n_docs,
   // i32 warp_idx = threadIdx.x / warpSize;
   curandStatePhilox4_32_10_t warp_rng = rng[0];
   __shared__ HashMap m[1];
-  constexpr u32 ring_buffer_size = 4*3; // number of concurrent elements * 96 bits per concurrent element
-  __shared__ u32 ring_buffer[ring_buffer_size];
   __shared__ typename cub::WarpScan<f32>::TempStorage warp_scan_temp[1];
 
   // loop over documents
@@ -54,7 +52,6 @@ __global__ void sample_topics(u32 size, u32 n_docs,
     // count topics in document
     u32 warp_d_len = d_len[i];
     u32 warp_d_idx = d_idx[i];
-    m->init(hash, 2*max_N_d, max_N_d, ring_buffer, ring_buffer_size, &warp_rng, warpSize);
     __syncthreads(); // ensure init has finished
     count_topics(z + warp_d_idx * sizeof(u32), warp_d_len, m, lane_idx);
     //
@@ -81,6 +78,10 @@ __global__ void sample_topics(u32 size, u32 n_docs,
         // sample from alias table
         warp_z = draw_alias(u2, prob[warp_w], alias[warp_w], table_size, lane_idx); // TODO: fix this
       }
+  constexpr u32 ring_buffer_size = (GPULDA_SAMPLE_TOPICS_BLOCKDIM/16)*2;
+  __shared__ u64 ring_buffer[ring_buffer_size];
+  __shared__ u32 ring_buffer_queue[ring_buffer_size];
+  m->init(hash, 2*max_N_d, max_N_d, ring_buffer, ring_buffer_queue, ring_buffer_size, &block_rng, blockDim.x);
 
       // add new z to sufficient statistic
       m->insert2(warp_z, lane_idx < 16 ? 1 : 0); // don't branch
