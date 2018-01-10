@@ -57,7 +57,7 @@ __global__ void sample_topics(u32 size, u32 n_docs,
       // initialize
       u32 block_d_len = d_len[i];
       u32 block_d_idx = d_idx[i];
-      m->init(block_hash, 2*max_N_d, max_N_d, ring_buffer, ring_buffer_queue, ring_buffer_size, &block_rng, blockDim.x);
+      m->init(block_hash, 2*max_N_d, K_d[i], ring_buffer, ring_buffer_queue, ring_buffer_size, &block_rng, blockDim.x);
       __syncthreads();
 
       // count topics in document
@@ -102,6 +102,9 @@ __global__ void sample_topics(u32 size, u32 n_docs,
           z[block_d_idx + j] = block_z;
         }
       }
+
+      // update topic count
+      K_d[i] = max(m->size_1, m->size_2);
     }
   }
 }

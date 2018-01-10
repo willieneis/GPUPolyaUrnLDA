@@ -61,9 +61,9 @@ extern "C" void initialize(Args* init_args, Buffer* buffers, u32 n_buffers) {
     cudaStreamCreate(buffers[i].stream) >> GPULDA_CHECK;
     cudaMalloc(&buffers[i].gpu_z, args->buffer_size * sizeof(u32)) >> GPULDA_CHECK;
     cudaMalloc(&buffers[i].gpu_w, args->buffer_size * sizeof(u32)) >> GPULDA_CHECK;
-    cudaMalloc(&buffers[i].gpu_d_len, args->max_D_buffer * sizeof(u32)) >> GPULDA_CHECK;
-    cudaMalloc(&buffers[i].gpu_d_idx, args->max_D_buffer * sizeof(u32)) >> GPULDA_CHECK;
-    cudaMalloc(&buffers[i].gpu_K_d, args->max_D_buffer * sizeof(u32)) >> GPULDA_CHECK;
+    cudaMalloc(&buffers[i].gpu_d_len, args->max_D * sizeof(u32)) >> GPULDA_CHECK;
+    cudaMalloc(&buffers[i].gpu_d_idx, args->max_D * sizeof(u32)) >> GPULDA_CHECK;
+    cudaMalloc(&buffers[i].gpu_K_d, args->max_D * sizeof(u32)) >> GPULDA_CHECK;
     cudaMalloc(&buffers[i].gpu_hash, GPULDA_SAMPLE_TOPICS_GRIDDIM*2*args->max_N_d * sizeof(u64)) >> GPULDA_CHECK;
     cudaMalloc(&buffers[i].gpu_temp, GPULDA_SAMPLE_TOPICS_GRIDDIM*args->max_N_d * sizeof(u32)) >> GPULDA_CHECK;
     cudaMalloc(&buffers[i].gpu_rng, sizeof(curandStatePhilox4_32_10_t)) >> GPULDA_CHECK;
