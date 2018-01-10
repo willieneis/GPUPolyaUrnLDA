@@ -325,7 +325,7 @@ void test_sample_topics() {
   cudaDeviceSynchronize() >> GPULDA_CHECK;
 
   // sample a topic indicator
-  gpulda::sample_topics<<<n_docs,GPULDA_SAMPLE_TOPICS_BLOCKDIM>>>(args.buffer_size, buffer.n_docs, buffer.gpu_z, buffer.gpu_w, buffer.gpu_d_len, buffer.gpu_d_idx, buffer.gpu_K_d, buffer.gpu_hash, buffer.gpu_temp, args.K, args.V, args.max_N_d, Phi_dense, sigma_a, NULL, NULL, 0, buffer.gpu_rng);
+  gpulda::sample_topics<<<GPULDA_SAMPLE_TOPICS_GRIDDIM,GPULDA_SAMPLE_TOPICS_BLOCKDIM>>>(args.buffer_size, buffer.n_docs, buffer.gpu_z, buffer.gpu_w, buffer.gpu_d_len, buffer.gpu_d_idx, buffer.gpu_K_d, buffer.gpu_hash, buffer.gpu_temp, args.K, args.V, args.max_N_d, Phi_dense, sigma_a, NULL, NULL, 0, buffer.gpu_rng);
   cudaDeviceSynchronize() >> GPULDA_CHECK;
 
   cudaMemcpy(z, buffer.gpu_z, buffer_size*sizeof(u32), cudaMemcpyDeviceToHost) >> GPULDA_CHECK;
