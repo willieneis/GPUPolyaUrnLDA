@@ -7,13 +7,13 @@ use structopt::StructOpt;
 \__) |    |__| |__ |__/ /--\
 P    ó    r    a   i    l
 U    l    n    t   r    l
-y         e   i    o
-a         n   c    c
-          t   h    a
-              l    t
-              e    i
-              t    o
-                   n
+     y         e   i    o
+     a         n   c    c
+               t   h    a
+                   l    t
+                   e    i
+                   t    o
+                        n
 Version")]
 pub struct Args {
     #[structopt(long="alpha", display_order_raw="1", help = "α parameter", default_value = "0.1")]
