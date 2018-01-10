@@ -1,8 +1,10 @@
-extern crate clap;
-extern crate libc;
-extern crate rand;
 #[macro_use]
 extern crate lazy_static;
+extern crate libc;
+extern crate rand;
+extern crate structopt;
+#[macro_use]
+extern crate structopt_derive;
 
 mod args;
 mod preprocess;
@@ -11,8 +13,8 @@ mod output;
 mod buffer;
 
 fn main() {
-  println!("Hello, world!");
-  preprocess::preprocess();
-  train::train();
-  output::output();
+    lazy_static::initialize(&args::ARGS);
+    preprocess::preprocess();
+    train::train();
+    output::output();
 }
