@@ -32,10 +32,10 @@ pub struct Args {
     pub seed: u32,
 
     #[structopt(long="buffer_size", display_order_raw="6", help = "Buffer size", default_value = "1024")]
-    pub buffer_size: usize,
+    pub buffer_size: u32,
 
     #[structopt(long="buffer_max_docs", display_order_raw="7", help = "Maximum document size", default_value = "32")]
-    pub buffer_max_docs: usize,
+    pub buffer_max_docs: u32,
 
     #[structopt(long="input", display_order_raw="8", help = "Input file", default_value = "data/small.txt")]
     pub input: String,
