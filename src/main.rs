@@ -7,10 +7,11 @@ extern crate structopt;
 extern crate structopt_derive;
 
 mod args;
+mod buffer;
+mod ffi;
+mod output;
 mod preprocess;
 mod train;
-mod output;
-mod buffer;
 
 fn main() {
     lazy_static::initialize(&args::ARGS);
