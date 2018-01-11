@@ -1,9 +1,10 @@
 [package]
 name = "gpulda"
 version = "0.0.1"
-authors = [ "Alexander Terenin, Måns Magnusson and collaborators" ]
+authors = [ "Alexander Terenin, Måns Magnusson, Willie Neiswanger and collaborators" ]
 
 [dependencies]
+byteorder = "1.2.1"
 lazy_static = "0.2"
 libc = "0.2.0"
 rand = "0.3"
