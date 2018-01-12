@@ -6,7 +6,7 @@ else
 NVCC = nvcc
 endif
 
-FLAGS += -gencode arch=compute_61,code=sm_61
+FLAGS += -gencode arch=compute_61,code=sm_61 -Xcompiler '-fPIC'
 
 CFLAGS = $(FLAGS)
 CFLAGS += -std=c++11
