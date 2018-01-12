@@ -3,5 +3,5 @@ fn main() {
         .arg("target/cuda/libGPUPolyaUrnLDA.a")
         .spawn()
         .expect("Failed to make");
-    println!("cargo:rustc-link-search=target/cuda/")
+    println!("cargo:rustc-link-search=target/cuda/");
 }

@@ -14,7 +14,7 @@ pub struct Args_FFI {
     pub max_N_d: uint32_t,
 }
 
-#[link(name = "GPUPolyaUrnLDA", kind = "static")]
+#[link(name = "GPUPolyaUrnLDA"/*, kind = "static"*/)] // static fails to link CUDA runtime
 extern {
     #[link_name="initialize"]
     fn unsafe_initialize(args: *mut Args_FFI, buffers: *mut Buffer, n_buffers: uint32_t);

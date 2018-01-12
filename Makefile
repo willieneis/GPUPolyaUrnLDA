@@ -25,7 +25,7 @@ rwildcard = $(wildcard $(addsuffix $2, $1)) $(foreach d,$(wildcard $(addsuffix *
 BUILDDIR = target/cuda
 SOURCES := $(call rwildcard,./,*.cu)
 OBJECTS = $(patsubst %.cu,$(BUILDDIR)/%.o,$(SOURCES))
-DOBJECTS = $(patsubst %.cu,$(BUILDDIR)/%.d,$(SOURCES))
+DEPENDENCIES = $(patsubst %.cu,$(BUILDDIR)/%.d,$(SOURCES))
 EXECUTABLE = GPUPolyaUrnLDA
 LIBRARY = libGPUPolyaUrnLDA.a
 
@@ -33,7 +33,7 @@ LIBRARY = libGPUPolyaUrnLDA.a
 
 all: $(BUILDDIR)/$(EXECUTABLE) $(BUILDDIR)/$(LIBRARY)
 
-$(DOBJECTS): $(BUILDDIR)/%.d: %.cu
+$(DEPENDENCIES): $(BUILDDIR)/%.d: %.cu
 	mkdir -p $(@D)
 	$(NVCC) $(CDFLAGS) -odir "$(@D)" -M -o "$@" "$<"
 
@@ -47,4 +47,4 @@ $(BUILDDIR)/$(LIBRARY): $(OBJECTS)
 	$(NVCC) $(LDFLAGS) -lib -o "$@" $(OBJECTS)
 
 clean:
-	rm -rv $(BUILDDIR)/$(EXECUTABLE) $(BUILDDIR)/$(LIBRARY) $(OBJECTS) $(DOBJECTS) $(DEPENDENCIES)
+	rm -rv $(BUILDDIR)/$(EXECUTABLE) $(BUILDDIR)/$(LIBRARY) $(OBJECTS) $(DEPENDENCIES)
