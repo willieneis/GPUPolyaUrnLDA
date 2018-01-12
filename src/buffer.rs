@@ -29,10 +29,10 @@ pub struct Buffer {
 impl Buffer {
   pub fn new() -> Buffer {
     // allocate arrays
-    let z = Vec::with_capacity(ARGS.buffer_size).into_boxed_slice();
-    let w = Vec::with_capacity(ARGS.buffer_size).into_boxed_slice();
-    let d = Vec::with_capacity(ARGS.buffer_max_docs).into_boxed_slice();
-    let K_d = Vec::with_capacity(ARGS.buffer_max_docs).into_boxed_slice();
+    let z = Vec::with_capacity(ARGS.buffer_size as usize).into_boxed_slice();
+    let w = Vec::with_capacity(ARGS.buffer_size as usize).into_boxed_slice();
+    let d = Vec::with_capacity(ARGS.buffer_max_docs as usize).into_boxed_slice();
+    let K_d = Vec::with_capacity(ARGS.buffer_max_docs as usize).into_boxed_slice();
     // create buffer
     let b = Buffer {
       z: z.as_ptr(),
@@ -65,10 +65,10 @@ impl Buffer {
 impl Drop for Buffer {
   fn drop(&mut self) {
     unsafe {
-      let z = Box::new(slice::from_raw_parts(self.z, ARGS.buffer_size));
-      let w = Box::new(slice::from_raw_parts(self.w, ARGS.buffer_size));
-      let d = Box::new(slice::from_raw_parts(self.d, ARGS.buffer_max_docs));
-      let K_d = Box::new(slice::from_raw_parts(self.K_d, ARGS.buffer_max_docs));
+      let z = Box::new(slice::from_raw_parts(self.z, ARGS.buffer_size as usize));
+      let w = Box::new(slice::from_raw_parts(self.w, ARGS.buffer_size as usize));
+      let d = Box::new(slice::from_raw_parts(self.d, ARGS.buffer_max_docs as usize));
+      let K_d = Box::new(slice::from_raw_parts(self.K_d, ARGS.buffer_max_docs as usize));
       // at this point, z,w,d,K_d are dropped and deallocated
     }
   }

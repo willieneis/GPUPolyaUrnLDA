@@ -18,7 +18,7 @@ struct Args {
   u32 V;
   u32* C;
   u32 buffer_size;
-  u32 max_D_buffer;
+  u32 max_D;
   u32 max_N_d;
 };
 

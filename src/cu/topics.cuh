@@ -5,7 +5,6 @@
 #include "tuning.cuh"
 #include "hashmap.cuh"
 #include <thrust/system/cuda/detail/cub/block/block_scan.cuh>
-#include <thrust/system/cuda/detail/cub/warp/warp_scan.cuh>
 
 namespace gpulda {
 
@@ -19,9 +18,9 @@ __global__ void sample_topics(u32 size, u32 n_docs,
 
 
 
-__device__ __forceinline__ u32 draw_alias(f32 u, f32* prob, u32* alias, u32 table_size, i32 lane_idx) {
+__device__ __forceinline__ u32 draw_alias(f32 u, f32* prob, u32* alias, u32 table_size) {
   u32 ret = 0;
-  if(lane_idx == 0) {
+  if(threadIdx.x == 0) {
     // determine the slot and update random number
     f32 ts = (f32) table_size;
     u32 slot = (u32) (u * ts);
@@ -44,7 +43,7 @@ __device__ __forceinline__ u32 draw_alias(f32 u, f32* prob, u32* alias, u32 tabl
 
 
 
-__device__ __forceinline__ u32 draw_wary_search(f32 u, HashMap* m, f32* mPhi, f32 sigma_b, i32 lane_idx) {
+__device__ __forceinline__ u32 draw_wary_search(f32 u, HashMap* m, f32* mPhi, f32 sigma_b) {
   // determine size and key array
   u32 size;
   u64* data;
@@ -57,6 +56,7 @@ __device__ __forceinline__ u32 draw_wary_search(f32 u, HashMap* m, f32* mPhi, f3
   }
 
   u32 thread_key;
+  i32 lane_idx = threadIdx.x; // TODO: vectorize
   if(lane_idx < warpSize/2) {
     // perform search
     i32 left = 0;
@@ -103,10 +103,12 @@ __device__ __forceinline__ u32 draw_wary_search(f32 u, HashMap* m, f32* mPhi, f3
 
 
 
-__device__ __forceinline__ void count_topics(u32* z, u32 document_size, HashMap* m, i32 lane_idx) {
+__device__ __forceinline__ void count_topics(u32* z, u32 document_size, HashMap* m) {
   // loop over z, add to m
-  for(i32 offset = 0; offset < document_size / warpSize + 1; ++offset) {
-    i32 i = offset * warpSize + lane_idx;
+  for(i32 offset = 0; offset < document_size / blockDim.x + 1; ++offset) {
+    i32 i = offset * blockDim.x + threadIdx.x;
+
+    // retreive z from global memory
     u32 lane_z;
     u32 lane_K;
     if(i < document_size) {
@@ -116,6 +118,8 @@ __device__ __forceinline__ void count_topics(u32* z, u32 document_size, HashMap*
       lane_z = 0;
       lane_K = 0;
     }
+
+    // insert to hashmap two half lanes at a time
     for(i32 j = 0; j < warpSize/2; ++j) {
       u32 half_warp_z = __shfl(lane_z, j, warpSize/2);
       u32 half_warp_K = __shfl(lane_K, j, warpSize/2);
@@ -127,8 +131,8 @@ __device__ __forceinline__ void count_topics(u32* z, u32 document_size, HashMap*
 
 
 
-__device__ __forceinline__ f32 compute_product_cumsum(f32* mPhi, HashMap* m, f32* Phi_dense, i32 lane_idx, cub::WarpScan<f32>::TempStorage* temp) {
-  typedef cub::WarpScan<f32> WarpScan;
+__device__ __forceinline__ f32 compute_product_cumsum(f32* mPhi, HashMap* m, f32* Phi_dense, cub::BlockScan<f32, GPULDA_SAMPLE_TOPICS_BLOCKDIM>::TempStorage* temp) {
+  typedef cub::BlockScan<f32, GPULDA_SAMPLE_TOPICS_BLOCKDIM> BlockScan;
   u32 m_size;
   u64* m_data;
   if(m->state < 3) {
@@ -140,8 +144,8 @@ __device__ __forceinline__ f32 compute_product_cumsum(f32* mPhi, HashMap* m, f32
   }
 
   f32 initial_value = 0;
-  for(i32 offset = 0; offset < m_size / warpSize + 1; ++offset) {
-    i32 i = offset * warpSize + lane_idx;
+  for(i32 offset = 0; offset < m_size / blockDim.x + 1; ++offset) {
+    i32 i = offset * blockDim.x + threadIdx.x;
     u64 m_i = (i < m_size) ? m_data[i] : 0;
     u32 token = (i < m_size) ? m->key(m_i) : m->empty_key();
     f32 m_count = (token == m->empty_key()) ? 0.0f : (float) m->value(m_i);
@@ -150,7 +154,8 @@ __device__ __forceinline__ f32 compute_product_cumsum(f32* mPhi, HashMap* m, f32
     f32 total_value;
 
     // compute scan
-    WarpScan(*temp).ExclusiveScan(thread_mPhi, thread_mPhi, 0, cub::Sum(), total_value);
+    BlockScan(*temp).ExclusiveScan(thread_mPhi, thread_mPhi, 0, cub::Sum(), total_value);
+    __syncthreads();
 
     // workaround for CUB bug: apply offset manually
     thread_mPhi = thread_mPhi + initial_value;
