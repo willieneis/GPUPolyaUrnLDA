@@ -1,17 +1,16 @@
 use libc::{uint32_t, c_float, c_void};
 use buffer::Buffer;
 
-#[allow(non_snake_case)]
 #[repr(C)]
 pub struct Args_FFI {
     pub alpha: c_float,
     pub beta: c_float,
-    pub K: uint32_t,
-    pub V: uint32_t,
-    pub C: *const c_void,
+    pub k: uint32_t,
+    pub v: uint32_t,
+    pub c: *const c_void,
     pub buffer_size: uint32_t,
-    pub max_D: uint32_t,
-    pub max_N_d: uint32_t,
+    pub max_d: uint32_t,
+    pub max_n_d: uint32_t,
 }
 
 #[link(name = "GPUPolyaUrnLDA"/*, kind = "static"*/)] // static fails to link CUDA runtime

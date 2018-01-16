@@ -44,6 +44,7 @@ pub fn preprocess() {
     remove_file(&ARGS.z_temp_file).unwrap_or_else(|_| ());
     remove_file(&ARGS.w_temp_file).unwrap_or_else(|_| ());
     remove_file(&ARGS.d_temp_file).unwrap_or_else(|_| ());
+    remove_file(&ARGS.k_d_temp_file).unwrap_or_else(|_| ());
 
     let token_ids = count_tokens();
 
@@ -51,18 +52,20 @@ pub fn preprocess() {
     let mut z = BufWriter::new(File::create(&ARGS.z_temp_file).unwrap());
     let mut w = BufWriter::new(File::create(&ARGS.w_temp_file).unwrap());
     let mut d = BufWriter::new(File::create(&ARGS.d_temp_file).unwrap());
+    let mut k_d = BufWriter::new(File::create(&ARGS.k_d_temp_file).unwrap());
 
     let mut rand = thread_rng();
-    let unif = Range::new(0, ARGS.K);
+    let unif = Range::new(0, ARGS.k);
 
     for line in input.lines() {
         let tokens = get_tokens(line.unwrap());
         z.write_all(as_bytes(&(0..tokens.len()).map(|_| unif.ind_sample(&mut rand)).collect())).unwrap();
         w.write_all(as_bytes(&tokens.iter().map(|t| *token_ids.get(t).unwrap()).collect())).unwrap();
         d.write_all(as_bytes(&vec![tokens.len() as u32])).unwrap();
+        k_d.write_all(as_bytes(&vec![ARGS.max_n_d])).unwrap();
     }
 
-    z.flush().unwrap(); w.flush().unwrap(); d.flush().unwrap();
+    z.flush().unwrap(); w.flush().unwrap(); d.flush().unwrap(); k_d.flush().unwrap();
 }
 
 
