@@ -1,7 +1,7 @@
 use args::ARGS;
 use buffer::Buffer;
 use std::iter::repeat;
-use ffi::{Args_FFI, initialize, cleanup};
+use ffi::{Args_FFI, initialize, sample_phi, sample_z_async, sync_buffer, cleanup};
 use std::fs::{File};
 use std::io::prelude::{BufRead};
 use std::io::{Read, BufReader};
@@ -42,47 +42,53 @@ pub fn train() {
     let mut w_reader = BufReader::new(File::open(&ARGS.w_temp_file).unwrap());
     let mut k_d_reader = BufReader::new(File::open(&ARGS.d_temp_file).unwrap());
 
-    // sample z
-    loop {
-        println!("starting read");
+    // ensure buffer is ready
+    for buffer in buffers.iter_mut() {
+        sync_buffer(&buffer);
 
-        let buffer_idx = 0;
-        let mut d_num_read = 0;
-        let mut d_count = 0;
-        {
-            let d_buffer = as_u32(d_reader.fill_buf().unwrap());
-            for d_size in d_buffer {
-                d_num_read += 1;
-                d_count += d_size;
-                if d_num_read > ARGS.max_d || d_count > ARGS.buffer_size {
-                    d_count -= d_size;
-                    d_num_read -= 1;
-                    break;
-                };
-            }
-        };
+        // load buffer
+        loop {
+            let mut d_num_read = 0;
+            let mut d_count = 0;
+            {
+                let d_buffer = as_u32(d_reader.fill_buf().unwrap());
+                for d_size in d_buffer {
+                    d_num_read += 1;
+                    d_count += d_size;
+                    if d_num_read > ARGS.max_d || d_count > ARGS.buffer_size {
+                        d_count -= d_size;
+                        d_num_read -= 1;
+                        break;
+                    };
+                }
+            };
 
-        if d_num_read == 0 { break };
+            if d_num_read == 0 { break };
 
-        { d_reader.consume(0) }; // ensure buffer can be used again
+            { d_reader.consume(0) }; // ensure buffer can be used again
 
-        { buffers[buffer_idx].set_n_docs(d_num_read); } // ensure scope of borrow ends here
+            { buffer.set_n_docs(d_num_read); } // ensure scope of borrow ends here
 
-        let read_buffer = &buffers[buffer_idx];
-        // let write_buffer = &buffers[(buffer_idx + 1) % buffers.len()];
+            let read_buffer = &buffer;
+            // let write_buffer = &buffers[(buffer_idx + 1) % buffers.len()];
 
-        let mut z_buffer_bytes = unsafe { slice::from_raw_parts_mut(read_buffer.z as *mut u8, (d_count as usize * mem::size_of::<u32>()) / mem::size_of::<u8>()) };
-        let mut w_buffer_bytes = unsafe { slice::from_raw_parts_mut(read_buffer.w as *mut u8, (d_count as usize * mem::size_of::<u32>()) / mem::size_of::<u8>()) };
-        let mut d_buffer_bytes = unsafe { slice::from_raw_parts_mut(read_buffer.d as *mut u8, (d_num_read as usize * mem::size_of::<u32>()) / mem::size_of::<u8>()) };
-        let mut k_d_buffer_bytes = unsafe { slice::from_raw_parts_mut(read_buffer.k_d as *mut u8, (d_num_read as usize * mem::size_of::<u32>()) / mem::size_of::<u8>()) };
+            let mut z_buffer_bytes = unsafe { slice::from_raw_parts_mut(read_buffer.z as *mut u8, (d_count as usize * mem::size_of::<u32>()) / mem::size_of::<u8>()) };
+            let mut w_buffer_bytes = unsafe { slice::from_raw_parts_mut(read_buffer.w as *mut u8, (d_count as usize * mem::size_of::<u32>()) / mem::size_of::<u8>()) };
+            let mut d_buffer_bytes = unsafe { slice::from_raw_parts_mut(read_buffer.d as *mut u8, (d_num_read as usize * mem::size_of::<u32>()) / mem::size_of::<u8>()) };
+            let mut k_d_buffer_bytes = unsafe { slice::from_raw_parts_mut(read_buffer.k_d as *mut u8, (d_num_read as usize * mem::size_of::<u32>()) / mem::size_of::<u8>()) };
 
-        z_reader.read_exact(&mut z_buffer_bytes).unwrap();
-        w_reader.read_exact(&mut w_buffer_bytes).unwrap();
-        d_reader.read_exact(&mut d_buffer_bytes).unwrap();
-        k_d_reader.read_exact(&mut k_d_buffer_bytes).unwrap();
+            z_reader.read_exact(&mut z_buffer_bytes).unwrap();
+            w_reader.read_exact(&mut w_buffer_bytes).unwrap();
+            d_reader.read_exact(&mut d_buffer_bytes).unwrap();
+            k_d_reader.read_exact(&mut k_d_buffer_bytes).unwrap();
+        }
+
+        // sample z
+        sample_z_async(&buffer);
     }
 
     // sample Phi
+    sample_phi();
 
     cleanup(&buffers);
 }
