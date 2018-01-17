@@ -11,7 +11,8 @@ pub struct Buffer {
   pub w: *const uint32_t,
   pub d: *const uint32_t,
   pub k_d: *const uint32_t,
-  n_docs: uint32_t,
+  pub n_docs: uint32_t,
+  pub n_tokens: uint32_t,
   gpu_z: *mut c_void,
   gpu_w: *mut c_void,
   gpu_d_len: *mut c_void,
@@ -37,6 +38,7 @@ impl Buffer {
       d: d.as_ptr(),
       k_d: k_d.as_ptr(),
       n_docs: 0,
+      n_tokens: 0,
       gpu_z: ptr::null_mut(),
       gpu_w: ptr::null_mut(),
       gpu_d_len: ptr::null_mut(),
@@ -58,6 +60,10 @@ impl Buffer {
 
   pub fn set_n_docs(&mut self, new: u32) {
     self.n_docs = new
+  }
+
+  pub fn set_n_tokens(&mut self, new: u32) {
+    self.n_tokens = new
   }
 }
 
