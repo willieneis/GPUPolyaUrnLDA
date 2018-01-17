@@ -18,19 +18,14 @@ fn get_token_names() -> HashMap<u32, String> {
     token_ids
 }
 
-fn safe_divide(a: usize, b: usize) -> usize {
-    // check for integer division roundoff error at runtime
-    a / b
-}
-
 fn as_u32<'a>(s: &'a [u8]) -> &'a [u32] {
-    unsafe {
-        slice::from_raw_parts(s.as_ptr() as *const u32,
-                              safe_divide(s.len() * mem::size_of::<u8>(), mem::size_of::<u32>()))
+    unsafe { // integer division rounds down
+        slice::from_raw_parts(s.as_ptr() as *const u32, (s.len() * mem::size_of::<u8>()) / mem::size_of::<u32>())
     }
 }
 
 pub fn output() {
+    println!("writing output");
     remove_file(&ARGS.output).unwrap_or_else(|_| ());
     let token_names = get_token_names();
 
@@ -58,7 +53,7 @@ pub fn output() {
                 write!(&mut output, "\n").unwrap();
                 d_num_read += 1;
             }
-            safe_divide(d_num_read * mem::size_of::<u8>(), mem::size_of::<u32>()) // return number of bytes read
+            (d_num_read * mem::size_of::<u8>()) / mem::size_of::<u32>() // return number of bytes read
         };
         if d_buffer_num_used_bytes == 0 { break };
         d.consume(d_buffer_num_used_bytes);
