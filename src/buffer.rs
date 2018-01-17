@@ -1,15 +1,16 @@
 use args::ARGS;
 use libc::{uint32_t, c_void};
+use std::iter::repeat;
 use std::mem;
 use std::slice;
 use std::ptr;
 
 #[repr(C)]
 pub struct Buffer {
-  z: *const uint32_t,
-  w: *const uint32_t,
-  d: *const uint32_t,
-  k_d: *const uint32_t,
+  pub z: *const uint32_t,
+  pub w: *const uint32_t,
+  pub d: *const uint32_t,
+  pub k_d: *const uint32_t,
   n_docs: uint32_t,
   gpu_z: *mut c_void,
   gpu_w: *mut c_void,
@@ -25,10 +26,10 @@ pub struct Buffer {
 impl Buffer {
   pub fn new() -> Buffer {
     // allocate arrays
-    let z = Vec::with_capacity(ARGS.buffer_size as usize).into_boxed_slice();
-    let w = Vec::with_capacity(ARGS.buffer_size as usize).into_boxed_slice();
-    let d = Vec::with_capacity(ARGS.max_d as usize).into_boxed_slice();
-    let k_d = Vec::with_capacity(ARGS.max_d as usize).into_boxed_slice();
+    let z = repeat(0).take(ARGS.buffer_size as usize).collect::<Vec<u32>>().into_boxed_slice();
+    let w = repeat(0).take(ARGS.buffer_size as usize).collect::<Vec<u32>>().into_boxed_slice();
+    let d = repeat(0).take(ARGS.max_d as usize).collect::<Vec<u32>>().into_boxed_slice();
+    let k_d = repeat(0).take(ARGS.max_d as usize).collect::<Vec<u32>>().into_boxed_slice();
     // create buffer
     let b = Buffer {
       z: z.as_ptr(),
@@ -53,6 +54,10 @@ impl Buffer {
     mem::forget(k_d);
     // return the buffer
     b
+  }
+
+  pub fn set_n_docs(&mut self, new: u32) {
+    self.n_docs = new
   }
 }
 
