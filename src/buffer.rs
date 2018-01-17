@@ -70,10 +70,10 @@ impl Buffer {
 impl Drop for Buffer {
     fn drop(&mut self) {
         unsafe {
-            let _z = Box::new(slice::from_raw_parts(self.z, ARGS.buffer_size as usize));
-            let _w = Box::new(slice::from_raw_parts(self.w, ARGS.buffer_size as usize));
-            let _d = Box::new(slice::from_raw_parts(self.d, ARGS.max_d as usize));
-            let _k_d = Box::new(slice::from_raw_parts(self.k_d, ARGS.max_d as usize));
+            let _z = Box::from_raw(self.z as *mut u32);
+            let _w = Box::from_raw(self.w as *mut u32);
+            let _d = Box::from_raw(self.d as *mut u32);
+            let _k_d = Box::from_raw(self.k_d as *mut u32);
             // at this point, z,w,d,K_d are dropped and deallocated
         }
     }
