@@ -81,7 +81,7 @@ pub fn train() {
     let mut d = Cursor::new(unsafe { Mmap::map(&d_file).unwrap() });
     let mut k_d = Cursor::new(unsafe { Mmap::map(&k_d_file).unwrap() });
 
-    for _i in 0..1/*ARGS.n_mc*/ {
+    for _i in 0..ARGS.n_mc {
         'iteration: loop {
             for buffer in buffers.iter_mut() {
                 fill_buffer(buffer, &mut z, &mut w, &mut d, &mut k_d);

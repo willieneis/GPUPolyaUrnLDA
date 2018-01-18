@@ -21,19 +21,19 @@ pub struct Args {
     #[structopt(long="beta", display_order_raw="2", help = "β parameter", default_value = "0.1")]
     pub beta: f32,
 
-    #[structopt(long="K", display_order_raw="3", help = "Number of topics", default_value = "10")]
+    #[structopt(long="K", display_order_raw="3", help = "Number of topics", default_value = "100")]
     pub k: u32,
 
-    #[structopt(long="buffer_size", display_order_raw="4", help = "Buffer size", default_value = "1024")]
+    #[structopt(long="buffer_size", display_order_raw="4", help = "Buffer size", default_value = "16384")]
     pub buffer_size: u32,
 
-    #[structopt(long="max_D", display_order_raw="5", help = "Maximum number of documents per buffer", default_value = "1024")]
+    #[structopt(long="max_D", display_order_raw="5", help = "Maximum number of documents per buffer", default_value = "10")]
     pub max_d: u32,
 
     #[structopt(long="max_N_d", display_order_raw="6", help = "Maximum document size", default_value = "1024")]
     pub max_n_d: u32,
 
-    #[structopt(long="n_mc", display_order_raw="7", help = "Number of Monte Carlo iterations", default_value = "100")]
+    #[structopt(long="n_mc", display_order_raw="7", help = "Number of Monte Carlo iterations", default_value = "1")]
     pub n_mc: u32,
 
     #[structopt(long="seed", display_order_raw="8", help = "Random number seed", default_value = "0")]
