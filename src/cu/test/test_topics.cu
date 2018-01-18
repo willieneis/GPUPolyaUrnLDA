@@ -298,7 +298,8 @@ void test_sample_topics() {
   u32 d[max_D] = {3,2};
   u32 K_d[max_D] = {1,1};
   u32 n_docs = max_D;
-  gpulda::Buffer buffer = {z, w, d, K_d, n_docs, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+  u32 n_tokens = buffer_size;
+  gpulda::Buffer buffer = {z, w, d, K_d, n_docs, n_tokens, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 
   gpulda::initialize(&args, &buffer, 1);
 

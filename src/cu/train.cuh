@@ -28,6 +28,7 @@ struct Buffer {
   u32* d;
   u32* K_d;
   u32 n_docs;
+  u32 n_tokens;
   u32* gpu_z;
   u32* gpu_w;
   u32* gpu_d_len;
