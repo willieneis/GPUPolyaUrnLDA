@@ -1,16 +1,12 @@
-use args::ARGS;
 use libc::{uint32_t, c_void};
-use std::iter::repeat;
-use std::mem;
-use std::slice;
 use std::ptr;
 
 #[repr(C)]
 pub struct Buffer {
-    pub z: *const uint32_t,
-    pub w: *const uint32_t,
-    pub d: *const uint32_t,
-    pub k_d: *const uint32_t,
+    z: *mut uint32_t,
+    w: *mut uint32_t,
+    d: *mut uint32_t,
+    k_d: *mut uint32_t,
     pub n_docs: uint32_t,
     pub n_tokens: uint32_t,
     gpu_z: *mut c_void,
@@ -26,17 +22,11 @@ pub struct Buffer {
 
 impl Buffer {
     pub fn new() -> Buffer {
-        // allocate arrays
-        let z = repeat(0).take(ARGS.buffer_size as usize).collect::<Vec<u32>>().into_boxed_slice();
-        let w = repeat(0).take(ARGS.buffer_size as usize).collect::<Vec<u32>>().into_boxed_slice();
-        let d = repeat(0).take(ARGS.max_d as usize).collect::<Vec<u32>>().into_boxed_slice();
-        let k_d = repeat(0).take(ARGS.max_d as usize).collect::<Vec<u32>>().into_boxed_slice();
-        // create buffer
-        let b = Buffer {
-            z: z.as_ptr(),
-            w: w.as_ptr(),
-            d: d.as_ptr(),
-            k_d: k_d.as_ptr(),
+        Buffer {
+            z: ptr::null_mut(),
+            w: ptr::null_mut(),
+            d: ptr::null_mut(),
+            k_d: ptr::null_mut(),
             n_docs: 0,
             n_tokens: 0,
             gpu_z: ptr::null_mut(),
@@ -48,14 +38,7 @@ impl Buffer {
             gpu_temp: ptr::null_mut(),
             gpu_rng: ptr::null_mut(),
             stream: ptr::null_mut(),
-        };
-        // as_ptr doesn't take ownership, so we need to be sure not to deallocate any arrays
-        mem::forget(z);
-        mem::forget(w);
-        mem::forget(d);
-        mem::forget(k_d);
-        // return the buffer
-        b
+        }
     }
 
     pub fn set_n_docs(&mut self, new: u32) {
@@ -65,16 +48,20 @@ impl Buffer {
     pub fn set_n_tokens(&mut self, new: u32) {
         self.n_tokens = new
     }
-}
 
-impl Drop for Buffer {
-    fn drop(&mut self) {
-        unsafe {
-            let _z = Box::from_raw(self.z as *mut u32);
-            let _w = Box::from_raw(self.w as *mut u32);
-            let _d = Box::from_raw(self.d as *mut u32);
-            let _k_d = Box::from_raw(self.k_d as *mut u32);
-            // at this point, z,w,d,K_d are dropped and deallocated
-        }
+    pub fn set_z(&mut self, new: *mut u32) {
+        self.z = new
+    }
+
+    pub fn set_w(&mut self, new: *mut u32) {
+        self.w = new
+    }
+
+    pub fn set_d(&mut self, new: *mut u32) {
+        self.d = new
+    }
+
+    pub fn set_k_d(&mut self, new: *mut u32) {
+        self.k_d = new
     }
 }

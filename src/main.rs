@@ -1,6 +1,8 @@
+extern crate byteorder;
 #[macro_use]
 extern crate lazy_static;
 extern crate libc;
+extern crate memmap;
 extern crate rand;
 extern crate structopt;
 #[macro_use]

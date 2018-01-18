@@ -151,18 +151,18 @@ extern "C" void sample_phi() {
 
 extern "C" void sample_z_async(Buffer* buffer) {
   // copy z,w,d to GPU and compute d_idx based on document length
-  cudaMemcpyAsync(buffer->gpu_z, buffer->z, args->buffer_size*sizeof(u32), cudaMemcpyHostToDevice,*buffer->stream) >> GPULDA_CHECK; // copy z to GPU
-  cudaMemcpyAsync(buffer->gpu_w, buffer->w, args->buffer_size*sizeof(u32), cudaMemcpyHostToDevice,*buffer->stream) >> GPULDA_CHECK; // copy w to GPU
+  cudaMemcpyAsync(buffer->gpu_z, buffer->z, buffer->n_tokens*sizeof(u32), cudaMemcpyHostToDevice,*buffer->stream) >> GPULDA_CHECK; // copy z to GPU
+  cudaMemcpyAsync(buffer->gpu_w, buffer->w, buffer->n_tokens*sizeof(u32), cudaMemcpyHostToDevice,*buffer->stream) >> GPULDA_CHECK; // copy w to GPU
   cudaMemcpyAsync(buffer->gpu_d_len, buffer->d, buffer->n_docs*sizeof(u32), cudaMemcpyHostToDevice,*buffer->stream) >> GPULDA_CHECK;
   cudaMemcpyAsync(buffer->gpu_K_d, buffer->K_d, buffer->n_docs*sizeof(u32), cudaMemcpyHostToDevice,*buffer->stream) >> GPULDA_CHECK;
   compute_d_idx<<<1,GPULDA_COMPUTE_D_IDX_BLOCKDIM,0,*buffer->stream>>>(buffer->gpu_d_len, buffer->gpu_d_idx, buffer->n_docs);
 
   // sample the topic indicators
   sample_topics<<<GPULDA_SAMPLE_TOPICS_GRIDDIM,GPULDA_SAMPLE_TOPICS_BLOCKDIM,0,*buffer->stream>>>(args->buffer_size, buffer->n_docs, buffer->gpu_z, buffer->gpu_w, buffer->gpu_d_len, buffer->gpu_d_idx, buffer->gpu_K_d, buffer->gpu_hash, buffer->gpu_temp, args->K, args->V, args->max_N_d, Phi->dense, sigma_a, alias->prob, alias->alias, alias->table_size, buffer->gpu_rng);
-  rng_advance<<<1,1,0,*buffer->stream>>>(2*args->buffer_size,Phi_rng);
+  rng_advance<<<1,1,0,*buffer->stream>>>(2*buffer->n_tokens,Phi_rng);
 
   // copy z back to host
-  cudaMemcpyAsync(buffer->z, buffer->gpu_z, args->buffer_size*sizeof(u32), cudaMemcpyDeviceToHost,*buffer->stream) >> GPULDA_CHECK;
+  cudaMemcpyAsync(buffer->z, buffer->gpu_z, buffer->n_tokens*sizeof(u32), cudaMemcpyDeviceToHost,*buffer->stream) >> GPULDA_CHECK;
 }
 
 extern "C" void sync_buffer(Buffer *buffer) {
