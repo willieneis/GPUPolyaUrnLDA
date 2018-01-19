@@ -81,7 +81,7 @@ extern "C" void initialize(Args* init_args, Buffer* buffers, u32 n_buffers) {
   cudaMemcpy(C, args->C, args->V * sizeof(u32), cudaMemcpyHostToDevice) >> GPULDA_CHECK;
 
   // run device init code
-  polya_urn_init<<<args->K,GPULDA_POLYA_URN_SAMPLE_BLOCKDIM>>>(n->dense, C, args->beta, args->V, pois->pois_alias->prob, pois->pois_alias->alias, pois->max_lambda, pois->max_value, Phi_rng);
+  polya_urn_init<<<args->K,GPULDA_POLYA_URN_SAMPLE_BLOCKDIM>>>(n->dense, C, args->K, args->beta, args->V, pois->pois_alias->prob, pois->pois_alias->alias, pois->max_lambda, pois->max_value, Phi_rng);
   cudaDeviceSynchronize() >> GPULDA_CHECK;
   rng_advance<<<1,1>>>(args->K*args->V,Phi_rng);
   cudaDeviceSynchronize() >> GPULDA_CHECK;

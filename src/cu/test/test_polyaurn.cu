@@ -36,7 +36,7 @@ void test_polya_urn_init() {
 
   gpulda::Poisson* pois = new gpulda::Poisson(100, 200, beta);
 
-  gpulda::polya_urn_init<<<K,32>>>(n, C, beta, V, pois->pois_alias->prob, pois->pois_alias->alias, pois->max_lambda, pois->max_value, Phi_rng);
+  gpulda::polya_urn_init<<<K,32>>>(n, C, K, beta, V, pois->pois_alias->prob, pois->pois_alias->alias, pois->max_lambda, pois->max_value, Phi_rng);
   cudaDeviceSynchronize() >> GPULDA_CHECK;
 
   cudaMemcpy(n_host, n, K * V * sizeof(u32), cudaMemcpyDeviceToHost) >> GPULDA_CHECK;
