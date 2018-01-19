@@ -38,7 +38,7 @@ __device__ __forceinline__ f32 draw_poisson(f32 u, f32 beta, u32 n,
 }
 
 
-__global__ void polya_urn_init(u32* n, u32* C, f32 beta, u32 V,
+__global__ void polya_urn_init(u32* n, u32* C, u32 K, f32 beta, u32 V,
     f32** prob, u32** alias, u32 max_lambda, u32 max_value,
     curandStatePhilox4_32_10_t* rng) {
   // initialize variables

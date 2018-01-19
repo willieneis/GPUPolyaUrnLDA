@@ -24,6 +24,9 @@ fn fill_buffer(buffer: &mut Buffer, z: &mut Cursor<MmapMut>, w: &mut Cursor<Mmap
         let d_size = d.read_u32::<LittleEndian>().unwrap_or(0);
         n_docs += 1;
         n_tokens += d_size;
+        if n_tokens > ARGS.max_n_d {
+            panic!("n_tokens exceeded max_N_d: {}", n_tokens)
+        }
         if d_size == 0 || n_docs > ARGS.max_d || n_tokens > ARGS.buffer_size {
             n_docs -= 1;
             n_tokens -= d_size;
@@ -42,7 +45,6 @@ fn fill_buffer(buffer: &mut Buffer, z: &mut Cursor<MmapMut>, w: &mut Cursor<Mmap
 }
 
 fn empty_buffer(buffer: &mut Buffer, z: &mut Cursor<MmapMut>, w: &mut Cursor<Mmap>, d: &mut Cursor<Mmap>, k_d: &mut Cursor<Mmap>) {
-    z.get_mut().flush().unwrap();
     let z_position = z.position();
     let w_position = w.position();
     let d_position = d.position();
@@ -82,6 +84,7 @@ pub fn train() {
     let mut k_d = Cursor::new(unsafe { Mmap::map(&k_d_file).unwrap() });
 
     for _i in 0..ARGS.n_mc {
+        sample_phi();
         'iteration: loop {
             for buffer in buffers.iter_mut() {
                 fill_buffer(buffer, &mut z, &mut w, &mut d, &mut k_d);
@@ -94,7 +97,7 @@ pub fn train() {
                 empty_buffer(buffer, &mut z, &mut w, &mut d, &mut k_d);
             }
         }
-        sample_phi();
+        z.get_mut().flush().unwrap();
         println!("finished iteration: {}", _i);
     }
 
