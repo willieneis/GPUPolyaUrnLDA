@@ -37,6 +37,8 @@ $(DEPENDENCIES): $(BUILDDIR)/%.d: %.cu
 	mkdir -p $(@D)
 	$(NVCC) $(DFLAGS) -odir "$(@D)" -M -o "$@" "$<"
 
+-include $(DEPENDENCIES)
+
 $(OBJECTS): $(BUILDDIR)/%.o: %.cu $(BUILDDIR)/%.d
 	$(NVCC) $(OFLAGS) -odir "$(@D)" -x cu -o "$@" "$<"
 
