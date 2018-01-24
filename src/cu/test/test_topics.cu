@@ -191,7 +191,7 @@ __global__ void test_count_topics(u32* error, curandStatePhilox4_32_10_t* rng) {
 
 __global__ void test_compute_product_cumsum(u32* error) {
   // compute constants
-  __shared__ typename cub::BlockScan<f32, GPULDA_SAMPLE_TOPICS_BLOCKDIM>::TempStorage block_scan_temp[1];
+  __shared__ f32 block_scan_temp[GPULDA_SAMPLE_TOPICS_BLOCKDIM / GPULDA_BLOCK_SCAN_WARP_SIZE];
   f32 tolerance = 0.0001f; // large to allow for randomness
 
   // declare arguments
