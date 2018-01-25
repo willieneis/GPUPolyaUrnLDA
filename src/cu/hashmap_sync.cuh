@@ -60,13 +60,31 @@ struct HashMap {
     return bfe_b64(entry, 32, 32);
   }
 
-  __device__ __forceinline__ u64 value(u64 entry) {
+  __device__ __forceinline__ u32 value(u64 entry) {
     return bfe_b64(entry, 0, 32);
   }
 
   __device__ __forceinline__ static constexpr u64 empty() {
     return 0xffffffff00000000;
   }
+
+
+
+
+
+
+  #ifdef GPULDA_HASH_DEBUG
+  __device__ inline void debug_print_slot(u32 slot, i32 table = 1) {
+    printf("\nhl:s\tk\tv\tis:st:d\n");
+    for(u32 s = slot; s < slot + warpSize/2; ++s) {
+      u64 entry = data[s % size];
+      printf("%d:%d\t%d\t%d\t", s % 16, s % size, key(entry), value(entry));
+      if(entry != empty()) printf("%d:%d:%d", hash_slot(key(entry)), hash_stride(key(entry)), key_distance(key(entry), slot));
+      printf("\n");
+    }
+    printf("\n");
+  }
+  #endif
 
 
 
@@ -260,7 +278,7 @@ struct HashMap {
       // check if we found the key, empty slot, or no key is present
       u32 key_found = __ballot(key(thread_entry) == half_warp_key) & half_lane_mask;
       u32 key_empty = __ballot(thread_entry == empty()) & half_lane_mask;
-      u32 no_key = __ballot(key_distance(key(thread_entry), slot) < distance);
+      u32 no_key = __ballot(key_distance(key(thread_entry), slot) < distance) & half_lane_mask;
 
       // determine which thread, if any, performs a swap
       u64 thread_new_entry;
@@ -302,13 +320,15 @@ struct HashMap {
       }
 
       // advance slot, declare failure if reached limit
-      slot = (slot + stride) % capacity;
-      distance += 1;
-      if(distance == GPULDA_HASH_MAX_NUM_LINES) {
-        if(half_lane_idx == 0) {
-          atomicOr(&rebuild, true);
+      if(swap_idx == -1 || (swap_success && (no_key != 0))) {
+        slot = (slot + stride) % capacity;
+        distance += 1;
+        if(distance == GPULDA_HASH_MAX_NUM_LINES) {
+          if(half_lane_idx == 0) {
+            atomicOr(&rebuild, true);
+          }
+          break;
         }
-        break;
       }
     }
   }

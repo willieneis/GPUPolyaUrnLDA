@@ -11,7 +11,7 @@ FLAGS += -gencode arch=compute_61,code=sm_61 -Xcompiler '-fPIC'
 CFLAGS = $(FLAGS)
 CFLAGS += -std=c++11
 ifdef RELEASE
-CFLAGS += -O2
+CFLAGS += -O3
 else
 CFLAGS += -G -g -O0
 endif
