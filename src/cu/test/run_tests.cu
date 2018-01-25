@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <iostream>
-#include "test_hashmap_sync.cuh"
 #include "test_hashmap.cuh"
 #include "test_polyaurn.cuh"
 #include "test_spalias.cuh"
@@ -11,14 +10,8 @@ namespace gpulda_test {
 void run_tests() {
   std::cout << "running tests" << std::endl;
 
-  std::cout << "testing hash_map_sync" << std::endl;
-  test_hash_map_sync();
-  std::cout << "testing_hash_map_phase_1" << std::endl;
-  test_hash_map_phase_1();
-  std::cout << "testing hash_map_phase_2" << std::endl;
-  test_hash_map_phase_2();
-  std::cout << "testing hash_map" << std::endl;
-  test_hash_map();
+  std::cout << "testing hashmap" << std::endl;
+  test_hashmap();
 
   std::cout << "testing polya_urn_init" << std::endl;
   test_polya_urn_init();

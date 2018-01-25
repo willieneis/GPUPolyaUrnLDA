@@ -76,65 +76,67 @@ __global__ void test_draw_alias(u32* error) {
 }
 
 __global__ void test_draw_wary_search(u32* error) {
-  constexpr i32 size = 96; // Need: 16 * something?
-  __shared__ gpulda::HashMap m[1];
+  constexpr i32 size = 96; // hashmap size must be multiple of 16
+  __shared__ gpulda::HashMap m;
   __shared__ u64 data[size];
-  m->size_1 = size;
-  m->data_1 = data;
-  m->state = 2;
+  m.capacity = size;
+  m.data = data;
   __shared__ f32 mPhi[size];
   f32 sigma_b = 50.0f;
 
-  u64 empty = m->entry(0, 0, m->null_pointer(), 0, 0);
   for(i32 offset = 0; offset < size / blockDim.x + 1; ++offset) {
     i32 i = offset * blockDim.x + threadIdx.x;
     if(i<size) {
-      data[i] = m->with_key(i, empty);
+      data[i] = m.entry(i,0);
       mPhi[i] = ((float)i) * sigma_b / ((float)size);
     }
   }
   __syncthreads();
 
   // test standard case: first entry in first slot
-  u32 topic = gpulda::draw_wary_search(0.0f, m, mPhi, sigma_b);
+  u32 topic = gpulda::draw_wary_search(0.0f, &m, mPhi, sigma_b);
   if(threadIdx.x==0 && topic!=0){
     error[0] = 1;
   }
 
   // test standard case: second entry in first slot
-  topic = gpulda::draw_wary_search(0.02f, m, mPhi, sigma_b);
+  topic = gpulda::draw_wary_search(0.02f, &m, mPhi, sigma_b);
   if(threadIdx.x==0 && topic!=1){
     error[0] = 2;
   }
 
   // test edge case 1: last entry in first slot, search ends in second slot
-  topic = gpulda::draw_wary_search(0.16f, m, mPhi, sigma_b);
+  topic = gpulda::draw_wary_search(0.16f, &m, mPhi, sigma_b);
   if(threadIdx.x==0 && topic!=15){
     error[0] = 3;
   }
 
   // test standard case: value in middle of slot
-  topic = gpulda::draw_wary_search(0.4f, m, mPhi, sigma_b);
+  topic = gpulda::draw_wary_search(0.4f, &m, mPhi, sigma_b);
   if(threadIdx.x==0 && topic!=38){
     error[0] = 4;
   }
 
   // test standard case: second-to-last entry in last slot
-  topic = gpulda::draw_wary_search(0.985f, m, mPhi, sigma_b);
+  topic = gpulda::draw_wary_search(0.985f, &m, mPhi, sigma_b);
   if(threadIdx.x==0 && topic!=94){
     error[0] = 5;
   }
 
   // test edge case 2: last entry in last slot
-  topic = gpulda::draw_wary_search(1.0f, m, mPhi, sigma_b);
+  topic = gpulda::draw_wary_search(1.0f, &m, mPhi, sigma_b);
   if(threadIdx.x==0 && topic!=95){
     error[0] = 6;
   }
 }
 
-__global__ void test_count_topics(u32* error, curandStatePhilox4_32_10_t* rng) {
+__global__ void test_count_topics(u32* error) {
   // compute constants
-  curandStatePhilox4_32_10_t thread_rng = rng[0];
+  __shared__ curandStatePhilox4_32_10_t rng;
+  if(threadIdx.x == 0) {
+    curand_init((unsigned long long) 0, (unsigned long long) 0, (unsigned long long) 0, &rng);
+  }
+  __syncthreads();
   constexpr u32 cutoff = 25;
   __shared__ u32 count[cutoff];
 
@@ -143,12 +145,8 @@ __global__ void test_count_topics(u32* error, curandStatePhilox4_32_10_t* rng) {
   __shared__ u32 z[size];
 
   // initialize hashmap
-  __shared__ gpulda::HashMap m[1];
-  __shared__ u64 data[2*size];
-  constexpr u32 ring_buffer_size = (GPULDA_SAMPLE_TOPICS_BLOCKDIM/16)*2;
-  __shared__ u64 ring_buffer[ring_buffer_size];
-  __shared__ u32 ring_buffer_queue[ring_buffer_size];
-  m->init(data, 2*size, size, ring_buffer, ring_buffer_queue, ring_buffer_size, &thread_rng, blockDim.x);
+  __shared__ gpulda::HashMap m;
+  m.init(size, &rng);
   __syncthreads();
 
   // prepare state
@@ -161,7 +159,7 @@ __global__ void test_count_topics(u32* error, curandStatePhilox4_32_10_t* rng) {
   __syncthreads();
 
   // test count_topics
-  gpulda::count_topics(z, size, m);
+  gpulda::count_topics(z, size, &m);
   __syncthreads();
 
   // retrieve values
@@ -171,7 +169,7 @@ __global__ void test_count_topics(u32* error, curandStatePhilox4_32_10_t* rng) {
     // retreive from hashmap, two half-lanes at a time
     for(i32 j = 0; j < warpSize/2; ++j) {
       i32 warp_i = __shfl(i, j, warpSize/2);
-      u32 warp_ct = m->get2(warp_i);
+      u32 warp_ct = m.get2(warp_i);
       if(i == warp_i && i < cutoff) {
         count[i] = warp_ct;
       }
@@ -201,26 +199,24 @@ __global__ void test_compute_product_cumsum(u32* error) {
   __shared__ f32 check[size];
 
   // populate hashmap data
-  __shared__ gpulda::HashMap m[1];
+  __shared__ gpulda::HashMap m;
   __shared__ u64 data[size];
-  m->size_1 = size;
-  m->data_1 = data;
-  m->state = 2;
+  m.capacity = size;
+  m.data = data;
 
   // prepare state
-  u64 empty = m->entry(0, 0, m->null_pointer(), 0, 0);
   for(i32 offset = 0; offset < size / blockDim.x + 1; ++offset) {
     i32 i = offset * blockDim.x + threadIdx.x;
     if(i < size) {
       Phi_dense[i] = 6.0f * (float) i;
-      data[i] = m->with_key(i, m->with_value(i, empty));
+      data[i] = m.entry(i, i);
       check[i] = (i == 0) ? 0.0f : ((float) (i-1)) * (((float) (i-1))+1.0f) * ((2.0f*((float) (i-1)))+1.0f);
     }
   }
   __syncthreads();
 
   // test count_topics
-  f32 total = gpulda::compute_product_cumsum(mPhi, m, Phi_dense, block_scan_temp);
+  f32 total = gpulda::compute_product_cumsum(mPhi, &m, Phi_dense, block_scan_temp);
   __syncthreads();
 
   // check correctness
@@ -239,11 +235,6 @@ __global__ void test_compute_product_cumsum(u32* error) {
 }
 
 void test_sample_topics_functions() {
-  curandStatePhilox4_32_10_t* rng;
-  cudaMalloc(&rng, sizeof(curandStatePhilox4_32_10_t)) >> GPULDA_CHECK;
-  gpulda::rng_init<<<1,1>>>(0,0,rng);
-  cudaDeviceSynchronize() >> GPULDA_CHECK;
-
   u32* out;
   cudaMalloc(&out, sizeof(u32)) >> GPULDA_CHECK;
   u32 out_host = 0;
@@ -255,7 +246,7 @@ void test_sample_topics_functions() {
   cudaMemcpy(&out_host, out, sizeof(u32), cudaMemcpyDeviceToHost) >> GPULDA_CHECK;
   assert(out_host == 0);
 
-  // draw topic via wary search
+  draw topic via wary search
   test_draw_wary_search<<<1,GPULDA_SAMPLE_TOPICS_BLOCKDIM>>>(out);
   cudaDeviceSynchronize() >> GPULDA_CHECK;
 
@@ -263,7 +254,7 @@ void test_sample_topics_functions() {
   assert(out_host == 0);
 
   // count topics
-  test_count_topics<<<1,GPULDA_SAMPLE_TOPICS_BLOCKDIM>>>(out, rng);
+  test_count_topics<<<1,GPULDA_SAMPLE_TOPICS_BLOCKDIM>>>(out);
   cudaDeviceSynchronize() >> GPULDA_CHECK;
 
   cudaMemcpy(&out_host, out, sizeof(u32), cudaMemcpyDeviceToHost) >> GPULDA_CHECK;
@@ -277,7 +268,6 @@ void test_sample_topics_functions() {
   assert(out_host == 0);
 
   // cleanup
-  cudaFree(rng);
   cudaFree(out);
 }
 
@@ -326,7 +316,7 @@ void test_sample_topics() {
   cudaDeviceSynchronize() >> GPULDA_CHECK;
 
   // sample a topic indicator
-  gpulda::sample_topics<<<GPULDA_SAMPLE_TOPICS_GRIDDIM,GPULDA_SAMPLE_TOPICS_BLOCKDIM>>>(args.buffer_size, buffer.n_docs, buffer.gpu_z, buffer.gpu_w, buffer.gpu_d_len, buffer.gpu_d_idx, buffer.gpu_K_d, buffer.gpu_hash, buffer.gpu_temp, args.K, args.V, args.max_N_d, Phi_dense, sigma_a, NULL, NULL, 0, buffer.gpu_rng);
+  gpulda::sample_topics<<<n_docs,GPULDA_SAMPLE_TOPICS_BLOCKDIM>>>(args.buffer_size, buffer.gpu_z, buffer.gpu_w, buffer.gpu_d_len, buffer.gpu_d_idx, buffer.gpu_K_d, args.K, args.V, args.max_N_d, Phi_dense, sigma_a, NULL, NULL, 0, buffer.gpu_rng);
   cudaDeviceSynchronize() >> GPULDA_CHECK;
 
   cudaMemcpy(z, buffer.gpu_z, buffer_size*sizeof(u32), cudaMemcpyDeviceToHost) >> GPULDA_CHECK;

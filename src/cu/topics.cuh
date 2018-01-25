@@ -9,8 +9,8 @@ namespace gpulda {
 
 __global__ void compute_d_idx(u32* d_len, u32* d_idx, u32 n_docs);
 
-__global__ void sample_topics(u32 size, u32 n_docs,
-    u32* z, u32* w, u32* d_len, u32* d_idx, u32* K_d, u64* hash, f32* mPhi,
+__global__ void sample_topics(u32 size,
+    u32* z, u32* w, u32* d_len, u32* d_idx, u32* K_d,
     u32 K, u32 V, u32 max_K_d,
     f32* Phi_dense, f32* sigma_a,
     f32** prob, u32** alias, u32 table_size, curandStatePhilox4_32_10_t* rng);
@@ -88,15 +88,8 @@ __device__ __forceinline__ u32 draw_alias(f32 u, f32* prob, u32* alias, u32 tabl
 
 __device__ __forceinline__ u32 draw_wary_search(f32 u, HashMap* m, f32* mPhi, f32 sigma_b) {
   // determine size and key array
-  u32 size;
-  u64* data;
-  if(m->state < 3) {
-    size = m->size_1;
-    data = m->data_1;
-  } else {
-    size = m->size_2;
-    data = m->data_2;
-  }
+  i32 size = m->capacity;
+  u64* data = m->data;
 
   u32 thread_key;
   i32 lane_idx = threadIdx.x; // TODO: vectorize
@@ -175,23 +168,16 @@ __device__ __forceinline__ void count_topics(u32* z, u32 document_size, HashMap*
 
 
 __device__ __forceinline__ f32 compute_product_cumsum(f32* mPhi, HashMap* m, f32* Phi_dense, f32* temp) {
-  u32 m_size;
-  u64* m_data;
-  if(m->state < 3) {
-    m_size = m->size_1;
-    m_data = m->data_1;
-  } else {
-    m_size = m->size_2;
-    m_data = m->data_2;
-  }
+  i32 m_size = m->capacity;
+  u64* m_data = m->data;
 
   f32 initial_value = 0;
   for(i32 offset = 0; offset < m_size / blockDim.x + 1; ++offset) {
     i32 i = offset * blockDim.x + threadIdx.x;
     u64 m_i = (i < m_size) ? m_data[i] : 0;
-    u32 token = (i < m_size) ? m->key(m_i) : m->empty_key();
-    f32 m_count = (token == m->empty_key()) ? 0.0f : (float) m->value(m_i);
-    f32 Phi_count = (token == m->empty_key()) ? 0.0f : Phi_dense[token];
+    u32 token = (i < m_size) ? m->key(m_i) : 0xffffffff;
+    f32 m_count = (float) m->value(m_i);
+    f32 Phi_count = (token == 0xffffffff) ? 0.0f : Phi_dense[token];
     f32 thread_mPhi = m_count * Phi_count;
     f32 total_value;
 
@@ -199,7 +185,7 @@ __device__ __forceinline__ f32 compute_product_cumsum(f32* mPhi, HashMap* m, f32
     total_value = block_scan_sum<f32>(thread_mPhi, temp);
     __syncthreads();
 
-    // workaround for CUB bug: apply offset manually
+    // apply offset
     thread_mPhi = thread_mPhi + initial_value;
     initial_value = total_value + initial_value;
 

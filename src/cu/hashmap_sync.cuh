@@ -319,10 +319,10 @@ struct HashMap {
     }
     __syncthreads();
 
-    // // rebuild if necessary, return error if memory allocation failed
-    // if(rebuild != false) {
-    //   return resize(half_warp_key, diff);
-    // }
+    // rebuild if necessary, return error if memory allocation failed
+    if(rebuild != false) {
+      return resize(half_warp_key, diff);
+    }
 
     // return success
     return 0;
