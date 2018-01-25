@@ -3,8 +3,7 @@
 namespace gpulda {
 
 __global__ void compute_d_idx(u32* d_len, u32* d_idx, u32 n_docs) {
-  typedef cub::BlockScan<i32, GPULDA_COMPUTE_D_IDX_BLOCKDIM> BlockScan;
-  __shared__ typename BlockScan::TempStorage temp;
+  __shared__ i32 temp[GPULDA_COMPUTE_D_IDX_BLOCKDIM / GPULDA_BLOCK_SCAN_WARP_SIZE];
 
   if(blockIdx.x == 0) {
     i32 thread_d;
@@ -18,10 +17,10 @@ __global__ void compute_d_idx(u32* d_len, u32* d_idx, u32 n_docs) {
         thread_d = 0;
       }
 
-      BlockScan(temp).ExclusiveScan(thread_d, thread_d, 0, cub::Sum(), total_value);
+      total_value = block_scan_sum<i32>(thread_d, temp);
       __syncthreads();
 
-      // workaround for CUB bug: apply offset manually
+      // apply offset
       thread_d = thread_d + initial_value;
       initial_value = total_value + initial_value;
 
@@ -48,7 +47,7 @@ __global__ void sample_topics(u32 size, u32 n_docs,
   constexpr u32 ring_buffer_size = (GPULDA_SAMPLE_TOPICS_BLOCKDIM/16)*2;
   __shared__ u64 ring_buffer[ring_buffer_size];
   __shared__ u32 ring_buffer_queue[ring_buffer_size];
-  __shared__ typename cub::BlockScan<f32, GPULDA_SAMPLE_TOPICS_BLOCKDIM>::TempStorage block_scan_temp[1];
+  __shared__ f32 block_scan_temp[GPULDA_SAMPLE_TOPICS_BLOCKDIM / GPULDA_BLOCK_SCAN_WARP_SIZE];
 
   // loop over each block's documents
   for(i32 offset = 0; offset < n_docs / gridDim.x + 1; ++offset) {

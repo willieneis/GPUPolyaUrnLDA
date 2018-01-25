@@ -4,7 +4,6 @@
 #include <curand_kernel.h> // need to add -lcurand to nvcc flags
 #include "tuning.cuh"
 #include "hashmap.cuh"
-#include <thrust/system/cuda/detail/cub/block/block_scan.cuh>
 
 namespace gpulda {
 
@@ -15,6 +14,50 @@ __global__ void sample_topics(u32 size, u32 n_docs,
     u32 K, u32 V, u32 max_K_d,
     f32* Phi_dense, f32* sigma_a,
     f32** prob, u32** alias, u32 table_size, curandStatePhilox4_32_10_t* rng);
+
+
+
+template<class T>
+__device__ __forceinline__ T block_scan_sum(T& thread_value, T* temp) {
+  T current_value = thread_value;
+
+  // first, compute a warp scan
+  for(i32 i = 1; i < warpSize; i<<=1) {
+    T add_value = __shfl_up(current_value, i, warpSize);
+    add_value = (i <= threadIdx.x % warpSize) ? add_value : 0;
+    current_value += add_value;
+  }
+
+  // final thread: write to shared array
+  if((threadIdx.x+1) % warpSize == 0) {
+    temp[threadIdx.x / warpSize] = current_value;
+  }
+
+  // ensure warp totals have been written
+  __syncthreads();
+
+  // read from shared array
+  T warp_total = 0;
+  if(threadIdx.x % warpSize < blockDim.x / warpSize) {
+    warp_total = temp[threadIdx.x % warpSize];
+  }
+
+  // compute warp scan
+  for(i32 i = 1; i < blockDim.x / warpSize; i<<=1) {
+    T add_value = __shfl_up(warp_total, i, warpSize);
+    add_value = (i <= threadIdx.x % warpSize) ? add_value : 0;
+    warp_total += add_value;
+  }
+
+  // add to current value
+  if(threadIdx.x >= warpSize) {
+    current_value += __shfl(warp_total, (threadIdx.x / warpSize) - 1, warpSize);
+  }
+
+  // adjust to make scan exclusive, write output, and return
+  thread_value = current_value - thread_value;
+  return __shfl(warp_total, (blockDim.x / warpSize) - 1, warpSize);
+}
 
 
 
@@ -131,8 +174,7 @@ __device__ __forceinline__ void count_topics(u32* z, u32 document_size, HashMap*
 
 
 
-__device__ __forceinline__ f32 compute_product_cumsum(f32* mPhi, HashMap* m, f32* Phi_dense, cub::BlockScan<f32, GPULDA_SAMPLE_TOPICS_BLOCKDIM>::TempStorage* temp) {
-  typedef cub::BlockScan<f32, GPULDA_SAMPLE_TOPICS_BLOCKDIM> BlockScan;
+__device__ __forceinline__ f32 compute_product_cumsum(f32* mPhi, HashMap* m, f32* Phi_dense, f32* temp) {
   u32 m_size;
   u64* m_data;
   if(m->state < 3) {
@@ -154,7 +196,7 @@ __device__ __forceinline__ f32 compute_product_cumsum(f32* mPhi, HashMap* m, f32
     f32 total_value;
 
     // compute scan
-    BlockScan(*temp).ExclusiveScan(thread_mPhi, thread_mPhi, 0, cub::Sum(), total_value);
+    total_value = block_scan_sum<f32>(thread_mPhi, temp);
     __syncthreads();
 
     // workaround for CUB bug: apply offset manually
