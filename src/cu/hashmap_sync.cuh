@@ -111,7 +111,8 @@ struct HashMap {
 
 
 
-  __device__ inline void allocate(i32 allocate_capacity) {
+  __device__ inline i32 allocate(i32 allocate_capacity) {
+    // allocate memory
     if(threadIdx.x == 0) {
       // round up to ensure cache alignment
       size = 0;
@@ -126,28 +127,6 @@ struct HashMap {
       d = __float2uint_rz(capacity * r.z);
       rebuild = false;
     }
-  }
-
-
-
-
-
-  __device__ inline void deallocate() {
-    if(threadIdx.x == 0 && data_non_aligned != NULL) {
-      free(data_non_aligned);
-    }
-  }
-
-
-
-
-
-  __device__ inline i32 init(i32 initial_capacity, curandStatePhilox4_32_10_t* in_rng) {
-    // allocate table
-    if(threadIdx.x == 0) {
-      rng = in_rng;
-    }
-    allocate(initial_capacity);
     __syncthreads();
 
     // check for allocation failure
@@ -171,17 +150,41 @@ struct HashMap {
 
 
 
+  __device__ inline void deallocate() {
+    if(threadIdx.x == 0 && data_non_aligned != NULL) {
+      free(data_non_aligned);
+    }
+  }
+
+
+
+
+
+  __device__ inline i32 init(i32 initial_capacity, curandStatePhilox4_32_10_t* in_rng) {
+    // allocate table
+    if(threadIdx.x == 0) {
+      rng = in_rng;
+    }
+
+    // allocate table and return error code
+    return allocate(initial_capacity);
+  }
+
+
+
+
+
   __device__ inline i32 resize(u32 half_warp_key, i32 half_warp_diff) {
     // save pointers from old table
     u64* old_data = data;
-    void* old_data_non_aligned = data_non_aligned;
+    int4* old_data_non_aligned = data_non_aligned;
     i32 old_capacity = capacity;
     __syncthreads();
 
     // repeat until resize succeeds or memory allocation fails
     do {
       // allocate new table
-      allocate(__float2uint_rz(capacity * GPULDA_HASH_GROWTH_RATE) + blockDim.x);
+      allocate(__float2uint_rz(capacity * GPULDA_HASH_GROWTH_RATE) + warpSize);
       __syncthreads();
 
       // check for allocation failure
@@ -202,14 +205,14 @@ struct HashMap {
 
         // insert two half lanes at a time
         for(i32 j = 0; j < warpSize/2; ++j) {
-          i32 half_warp_entry = __shfl(lane_entry, j, warpSize/2);
+          u64 half_warp_entry = __shfl(lane_entry, j, warpSize/2);
           try_insert2(key(half_warp_entry), value(half_warp_entry));
         }
       }
       __syncthreads();
 
       // if any insertions failed, try again with even larger capacity
-      if(threadIdx.x == 0 && rebuild != false) {
+      if(rebuild != false) {
         free(data_non_aligned);
       }
     } while(rebuild != false);
