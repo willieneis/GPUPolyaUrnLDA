@@ -246,7 +246,7 @@ void test_sample_topics_functions() {
   cudaMemcpy(&out_host, out, sizeof(u32), cudaMemcpyDeviceToHost) >> GPULDA_CHECK;
   assert(out_host == 0);
 
-  draw topic via wary search
+  // draw topic via wary search
   test_draw_wary_search<<<1,GPULDA_SAMPLE_TOPICS_BLOCKDIM>>>(out);
   cudaDeviceSynchronize() >> GPULDA_CHECK;
 
