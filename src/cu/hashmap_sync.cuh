@@ -46,11 +46,6 @@ struct HashMap {
     return ret;
   }
 
-  __device__ __forceinline__ u64 with_key(u32 key, u64 entry) {
-    bfi_b64(entry, entry, key, 32, 32);
-    return entry;
-  }
-
   __device__ __forceinline__ u64 with_value(i32 value, u64 entry) {
     bfi_b64(entry, entry, value, 0, 32);
     return entry;
@@ -285,7 +280,7 @@ struct HashMap {
       i32 swap_idx = -1;
       if(key_found != 0) {
         swap_idx = (__ffs(key_found) - 1) % (warpSize/2);
-        thread_new_entry = with_value(thread_entry, value(thread_entry) + diff);
+        thread_new_entry = with_value(value(thread_entry) + diff, thread_entry);
       } else if(key_empty != 0) {
         swap_idx = (__ffs(key_empty) - 1) % (warpSize/2);
         thread_new_entry = entry(half_warp_key, max(diff, 0));
