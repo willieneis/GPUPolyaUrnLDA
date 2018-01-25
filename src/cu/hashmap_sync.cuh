@@ -40,7 +40,7 @@ struct HashMap {
     asm("bfi.b64 %0, %1, %2, %3, %4;" : "=l"(ret) : "l"(y), "l"(x), "r"(bit_start), "r"(num_bits));
   }
 
-  __device__ __forceinline__ u64 entry(u32 key, u32 value) {
+  __device__ __forceinline__ u64 entry(u32 key, i32 value) {
     u64 ret = value;
     bfi_b64(ret, ret, key, 32, 32);
     return ret;
@@ -51,7 +51,7 @@ struct HashMap {
     return entry;
   }
 
-  __device__ __forceinline__ u64 with_value(u64 value, u64 entry) {
+  __device__ __forceinline__ u64 with_value(i32 value, u64 entry) {
     bfi_b64(entry, entry, value, 0, 32);
     return entry;
   }
@@ -60,7 +60,7 @@ struct HashMap {
     return bfe_b64(entry, 32, 32);
   }
 
-  __device__ __forceinline__ u32 value(u64 entry) {
+  __device__ __forceinline__ i32 value(u64 entry) {
     return bfe_b64(entry, 0, 32);
   }
 
@@ -74,11 +74,11 @@ struct HashMap {
 
 
   #ifdef GPULDA_HASH_DEBUG
-  __device__ inline void debug_print_slot(u32 slot, i32 table = 1) {
+  __device__ inline void debug_print_slot(i32 slot) {
     printf("\nhl:s\tk\tv\tis:st:d\n");
-    for(u32 s = slot; s < slot + warpSize/2; ++s) {
-      u64 entry = data[s % size];
-      printf("%d:%d\t%d\t%d\t", s % 16, s % size, key(entry), value(entry));
+    for(i32 s = slot; s < slot + warpSize/2; ++s) {
+      u64 entry = data[s % capacity];
+      printf("%d:%d\t%u\t%d\t", s % 16, s % capacity, key(entry), value(entry));
       if(entry != empty()) printf("%d:%d:%d", hash_slot(key(entry)), hash_stride(key(entry)), key_distance(key(entry), slot));
       printf("\n");
     }
@@ -137,6 +137,16 @@ struct HashMap {
 
 
 
+  __device__ inline void deallocate() {
+    if(threadIdx.x == 0 && data_non_aligned != NULL) {
+      free(data_non_aligned);
+    }
+  }
+
+
+
+
+
   __device__ inline i32 init(i32 initial_capacity, curandStatePhilox4_32_10_t* in_rng) {
     // allocate table
     if(threadIdx.x == 0) {
@@ -160,16 +170,6 @@ struct HashMap {
 
     // return success
     return 0;
-  }
-
-
-
-
-
-  __device__ inline void deallocate() {
-    if(threadIdx.x == 0 && data_non_aligned != NULL) {
-      free(data_non_aligned);
-    }
   }
 
 
@@ -233,7 +233,7 @@ struct HashMap {
   __device__ inline u32 get2(u32 half_warp_key) {
     // determine constants
     i32 half_lane_idx = threadIdx.x % (warpSize/2);
-    u32 half_lane_mask = half_lane_idx < (warpSize/2) ? 0x0000ffff : 0xffff0000;
+    u32 half_lane_mask = (threadIdx.x % warpSize) < (warpSize/2) ? 0x0000ffff : 0xffff0000;
 
     // check table
     i32 initial_slot = hash_slot(half_warp_key);
@@ -266,7 +266,7 @@ struct HashMap {
   __device__ inline void try_insert2(u32 half_warp_key, i32 diff) {
     // determine constants
     i32 half_lane_idx = threadIdx.x % (warpSize/2);
-    u32 half_lane_mask = half_lane_idx < (warpSize/2) ? 0x0000ffff : 0xffff0000;
+    u32 half_lane_mask = (threadIdx.x % warpSize) < (warpSize/2) ? 0x0000ffff : 0xffff0000;
 
     i32 slot = hash_slot(half_warp_key);
     i32 stride = hash_stride(half_warp_key);
@@ -299,8 +299,8 @@ struct HashMap {
       if(half_lane_idx == swap_idx) {
         u64 old = atomicCAS(&data[slot + half_lane_idx], thread_entry, thread_new_entry);
         swap_success = (thread_entry == old);
-      }
-      __shfl(swap_success, swap_idx, warpSize/2);
+        }
+      swap_success = __shfl(swap_success, swap_idx, warpSize/2);
 
       // if swap succeeded, either exit or prepare new key
       if(swap_success) {
@@ -344,10 +344,10 @@ struct HashMap {
     }
     __syncthreads();
 
-    // rebuild if necessary, return error if memory allocation failed
-    if(rebuild != false) {
-      return resize(half_warp_key, diff);
-    }
+    // // rebuild if necessary, return error if memory allocation failed
+    // if(rebuild != false) {
+    //   return resize(half_warp_key, diff);
+    // }
 
     // return success
     return 0;

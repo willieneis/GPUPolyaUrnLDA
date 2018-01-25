@@ -48,52 +48,62 @@ __global__ void test_hash_map_insert_print_steps() {
   m.a=26; m.b=1; m.c=30; m.d=13;
   __syncthreads();
 
-  // 16
-  m.insert2(threadIdx.x < 16 ? 0 : 3, 1); if(threadIdx.x == 0) { m.debug_print_slot(16); printf("------------------------------------------------------------\n"); }
-  m.insert2(threadIdx.x < 16 ? 6 : 9, 1); if(threadIdx.x == 0) { m.debug_print_slot(16); printf("------------------------------------------------------------\n"); }
-  m.insert2(threadIdx.x < 16 ? 12 : 15, 1); if(threadIdx.x == 0) { m.debug_print_slot(16); printf("------------------------------------------------------------\n"); }
-  m.insert2(threadIdx.x < 16 ? 18 : 21, 1);if(threadIdx.x == 0) { m.debug_print_slot(16); printf("------------------------------------------------------------\n"); }
-  m.insert2(threadIdx.x < 16 ? 24 : 27, 1); if(threadIdx.x == 0) { m.debug_print_slot(16); printf("------------------------------------------------------------\n"); }
-  m.insert2(threadIdx.x < 16 ? 30 : 33, 1); if(threadIdx.x == 0) { m.debug_print_slot(16); printf("------------------------------------------------------------\n"); }
-  m.insert2(threadIdx.x < 16 ? 36 : 39, 1); if(threadIdx.x == 0) { m.debug_print_slot(16); printf("------------------------------------------------------------\n"); }
-  m.insert2(threadIdx.x < 16 ? 42 : 45, 1); if(threadIdx.x == 0) { m.debug_print_slot(16); printf("------------------------------------------------------------\n"); }
+  if(threadIdx.x < warpSize) {
+    if(threadIdx.x == 0) { m.debug_print_slot(0); }
+    if(threadIdx.x == 0) { m.debug_print_slot(16); }
+    if(threadIdx.x == 0) { m.debug_print_slot(32); }
+    if(threadIdx.x == 0) { m.debug_print_slot(48); }
+    if(threadIdx.x == 0) { m.debug_print_slot(64); }
+    if(threadIdx.x == 0) { m.debug_print_slot(80); }
+    if(threadIdx.x == 0) { printf("------------------------------------------------------------\n"); }
 
-  // 16->32
-  m.insert2(threadIdx.x < 16 ? 48 : 51, 1); if(threadIdx.x == 0) { m.debug_print_slot(32); printf("------------------------------------------------------------\n"); }
-  m.insert2(threadIdx.x < 16 ? 54 : 57, 1); if(threadIdx.x == 0) { m.debug_print_slot(32); printf("------------------------------------------------------------\n"); }
-  m.insert2(threadIdx.x < 16 ? 60 : 63, 1); if(threadIdx.x == 0) { m.debug_print_slot(32); printf("------------------------------------------------------------\n"); }
-  m.insert2(threadIdx.x < 16 ? 66 : 69, 1); if(threadIdx.x == 0) { m.debug_print_slot(32); printf("------------------------------------------------------------\n"); }
-  m.insert2(threadIdx.x < 16 ? 72 : 75, 1); if(threadIdx.x == 0) { m.debug_print_slot(32); printf("------------------------------------------------------------\n"); }
-  m.insert2(threadIdx.x < 16 ? 78 : 81, 1); if(threadIdx.x == 0) { m.debug_print_slot(32); printf("------------------------------------------------------------\n"); }
-  m.insert2(threadIdx.x < 16 ? 84 : 87, 1); if(threadIdx.x == 0) { m.debug_print_slot(32); printf("------------------------------------------------------------\n"); }
-  m.insert2(threadIdx.x < 16 ? 90 : 93, 1); if(threadIdx.x == 0) { m.debug_print_slot(32); printf("------------------------------------------------------------\n"); }
+    // 16
+    m.insert2(threadIdx.x < 16 ? 0 : 3, 1); if(threadIdx.x == 0) { m.debug_print_slot(16); printf("------------------------------------------------------------\n"); }
+    m.insert2(threadIdx.x < 16 ? 6 : 9, 1); if(threadIdx.x == 0) { m.debug_print_slot(16); printf("------------------------------------------------------------\n"); }
+    m.insert2(threadIdx.x < 16 ? 12 : 15, 1); if(threadIdx.x == 0) { m.debug_print_slot(16); printf("------------------------------------------------------------\n"); }
+    m.insert2(threadIdx.x < 16 ? 18 : 21, 1);if(threadIdx.x == 0) { m.debug_print_slot(16); printf("------------------------------------------------------------\n"); }
+    m.insert2(threadIdx.x < 16 ? 24 : 27, 1); if(threadIdx.x == 0) { m.debug_print_slot(16); printf("------------------------------------------------------------\n"); }
+    m.insert2(threadIdx.x < 16 ? 30 : 33, 1); if(threadIdx.x == 0) { m.debug_print_slot(16); printf("------------------------------------------------------------\n"); }
+    m.insert2(threadIdx.x < 16 ? 36 : 39, 1); if(threadIdx.x == 0) { m.debug_print_slot(16); printf("------------------------------------------------------------\n"); }
+    m.insert2(threadIdx.x < 16 ? 42 : 45, 1); if(threadIdx.x == 0) { m.debug_print_slot(16); printf("------------------------------------------------------------\n"); }
 
-  // 48
-  m.insert2(threadIdx.x < 16 ? 1 : 4, 1); if(threadIdx.x == 0) { m.debug_print_slot(48); printf("------------------------------------------------------------\n"); }
-  m.insert2(threadIdx.x < 16 ? 7 : 10, 1); if(threadIdx.x == 0) { m.debug_print_slot(48); printf("------------------------------------------------------------\n"); }
-  m.insert2(threadIdx.x < 16 ? 13 : 16, 1); if(threadIdx.x == 0) { m.debug_print_slot(48); printf("------------------------------------------------------------\n"); }
-  m.insert2(threadIdx.x < 16 ? 19 : 22, 1); if(threadIdx.x == 0) { m.debug_print_slot(48); printf("------------------------------------------------------------\n"); }
-  m.insert2(threadIdx.x < 16 ? 25 : 28, 1); if(threadIdx.x == 0) { m.debug_print_slot(48); printf("------------------------------------------------------------\n"); }
-  m.insert2(threadIdx.x < 16 ? 31 : 34, 1); if(threadIdx.x == 0) { m.debug_print_slot(48); printf("------------------------------------------------------------\n"); }
-  m.insert2(threadIdx.x < 16 ? 37 : 40, 1); if(threadIdx.x == 0) { m.debug_print_slot(48); printf("------------------------------------------------------------\n"); }
-  m.insert2(threadIdx.x < 16 ? 43 : 46, 1); if(threadIdx.x == 0) { m.debug_print_slot(48); printf("------------------------------------------------------------\n"); }
+    // 16->32
+    m.insert2(threadIdx.x < 16 ? 48 : 51, 1); if(threadIdx.x == 0) { m.debug_print_slot(32); printf("------------------------------------------------------------\n"); }
+    m.insert2(threadIdx.x < 16 ? 54 : 57, 1); if(threadIdx.x == 0) { m.debug_print_slot(32); printf("------------------------------------------------------------\n"); }
+    m.insert2(threadIdx.x < 16 ? 60 : 63, 1); if(threadIdx.x == 0) { m.debug_print_slot(32); printf("------------------------------------------------------------\n"); }
+    m.insert2(threadIdx.x < 16 ? 66 : 69, 1); if(threadIdx.x == 0) { m.debug_print_slot(32); printf("------------------------------------------------------------\n"); }
+    m.insert2(threadIdx.x < 16 ? 72 : 75, 1); if(threadIdx.x == 0) { m.debug_print_slot(32); printf("------------------------------------------------------------\n"); }
+    m.insert2(threadIdx.x < 16 ? 78 : 81, 1); if(threadIdx.x == 0) { m.debug_print_slot(32); printf("------------------------------------------------------------\n"); }
+    m.insert2(threadIdx.x < 16 ? 84 : 87, 1); if(threadIdx.x == 0) { m.debug_print_slot(32); printf("------------------------------------------------------------\n"); }
+    m.insert2(threadIdx.x < 16 ? 90 : 93, 1); if(threadIdx.x == 0) { m.debug_print_slot(32); printf("------------------------------------------------------------\n"); }
 
-  // 16->48 evict
-  m.insert2(threadIdx.x < 16 ? 96 : 99, 1); if(threadIdx.x == 0) { m.debug_print_slot(48); printf("------------------------------------------------------------\n"); }
-  m.insert2(threadIdx.x < 16 ? 102 : 105, 1); if(threadIdx.x == 0) { m.debug_print_slot(48); printf("------------------------------------------------------------\n"); }
-  m.insert2(threadIdx.x < 16 ? 108 : 111, 1); if(threadIdx.x == 0) { m.debug_print_slot(48); printf("------------------------------------------------------------\n"); }
-  m.insert2(threadIdx.x < 16 ? 114 : 117, 1); if(threadIdx.x == 0) { m.debug_print_slot(48); printf("------------------------------------------------------------\n"); }
-  m.insert2(threadIdx.x < 16 ? 120 : 123, 1); if(threadIdx.x == 0) { m.debug_print_slot(48); printf("------------------------------------------------------------\n"); }
-  m.insert2(threadIdx.x < 16 ? 126 : 129, 1); if(threadIdx.x == 0) { m.debug_print_slot(48); printf("------------------------------------------------------------\n"); }
-  m.insert2(threadIdx.x < 16 ? 132 : 135, 1); if(threadIdx.x == 0) { m.debug_print_slot(48); printf("------------------------------------------------------------\n"); }
-  m.insert2(threadIdx.x < 16 ? 138 : 141, 1); if(threadIdx.x == 0) { m.debug_print_slot(48); printf("------------------------------------------------------------\n"); }
+    // 48
+    m.insert2(threadIdx.x < 16 ? 1 : 4, 1); if(threadIdx.x == 0) { m.debug_print_slot(48); printf("------------------------------------------------------------\n"); }
+    m.insert2(threadIdx.x < 16 ? 7 : 10, 1); if(threadIdx.x == 0) { m.debug_print_slot(48); printf("------------------------------------------------------------\n"); }
+    m.insert2(threadIdx.x < 16 ? 13 : 16, 1); if(threadIdx.x == 0) { m.debug_print_slot(48); printf("------------------------------------------------------------\n"); }
+    m.insert2(threadIdx.x < 16 ? 19 : 22, 1); if(threadIdx.x == 0) { m.debug_print_slot(48); printf("------------------------------------------------------------\n"); }
+    m.insert2(threadIdx.x < 16 ? 25 : 28, 1); if(threadIdx.x == 0) { m.debug_print_slot(48); printf("------------------------------------------------------------\n"); }
+    m.insert2(threadIdx.x < 16 ? 31 : 34, 1); if(threadIdx.x == 0) { m.debug_print_slot(48); printf("------------------------------------------------------------\n"); }
+    m.insert2(threadIdx.x < 16 ? 37 : 40, 1); if(threadIdx.x == 0) { m.debug_print_slot(48); printf("------------------------------------------------------------\n"); }
+    m.insert2(threadIdx.x < 16 ? 43 : 46, 1); if(threadIdx.x == 0) { m.debug_print_slot(48); printf("------------------------------------------------------------\n"); }
 
-  if(threadIdx.x == 0) { m.debug_print_slot(0); }
-  if(threadIdx.x == 0) { m.debug_print_slot(16); }
-  if(threadIdx.x == 0) { m.debug_print_slot(32); }
-  if(threadIdx.x == 0) { m.debug_print_slot(48); }
-  if(threadIdx.x == 0) { m.debug_print_slot(64); }
-  if(threadIdx.x == 0) { m.debug_print_slot(80); }
+    // 16->48 evict
+    m.insert2(threadIdx.x < 16 ? 96 : 99, 1); if(threadIdx.x == 0) { m.debug_print_slot(48); printf("------------------------------------------------------------\n"); }
+    m.insert2(threadIdx.x < 16 ? 102 : 105, 1); if(threadIdx.x == 0) { m.debug_print_slot(48); printf("------------------------------------------------------------\n"); }
+    m.insert2(threadIdx.x < 16 ? 108 : 111, 1); if(threadIdx.x == 0) { m.debug_print_slot(48); printf("------------------------------------------------------------\n"); }
+    m.insert2(threadIdx.x < 16 ? 114 : 117, 1); if(threadIdx.x == 0) { m.debug_print_slot(48); printf("------------------------------------------------------------\n"); }
+    m.insert2(threadIdx.x < 16 ? 120 : 123, 1); if(threadIdx.x == 0) { m.debug_print_slot(48); printf("------------------------------------------------------------\n"); }
+    m.insert2(threadIdx.x < 16 ? 126 : 129, 1); if(threadIdx.x == 0) { m.debug_print_slot(48); printf("------------------------------------------------------------\n"); }
+    m.insert2(threadIdx.x < 16 ? 132 : 135, 1); if(threadIdx.x == 0) { m.debug_print_slot(48); printf("------------------------------------------------------------\n"); }
+    m.insert2(threadIdx.x < 16 ? 138 : 141, 1); if(threadIdx.x == 0) { m.debug_print_slot(48); printf("------------------------------------------------------------\n"); }
+
+    if(threadIdx.x == 0) { m.debug_print_slot(0); }
+    if(threadIdx.x == 0) { m.debug_print_slot(16); }
+    if(threadIdx.x == 0) { m.debug_print_slot(32); }
+    if(threadIdx.x == 0) { m.debug_print_slot(48); }
+    if(threadIdx.x == 0) { m.debug_print_slot(64); }
+    if(threadIdx.x == 0) { m.debug_print_slot(80); }
+  }
 
   m.deallocate();
   #endif
@@ -182,6 +192,13 @@ void test_hash_map_sync() {
   assert(out_host[0] == (max_size / GPULDA_HASH_LINE_SIZE) * GPULDA_HASH_LINE_SIZE);
   out_host[0] = 0;
 
+  // print steps
+  // #ifdef GPULDA_HASH_DEBUG
+  // test_hash_map_insert_print_steps<<<1,warpSize>>>();
+  // cudaDeviceSynchronize() >> GPULDA_CHECK;
+  // assert(false);
+  // #endif
+
   // insert2: warp, no rebuild
   test_hash_map_insert2<<<1,warpSize>>>(num_unique_elements, num_elements, max_size, out, false);
   cudaDeviceSynchronize() >> GPULDA_CHECK;
@@ -204,27 +221,27 @@ void test_hash_map_sync() {
     out_host[i] = 0;
   }
 
-  // // insert2: warp, rebuild
-  // test_hash_map_insert2<<<1,warpSize>>>(num_unique_elements, num_elements, max_size, out, true);
-  // cudaDeviceSynchronize() >> GPULDA_CHECK;
-  //
-  // cudaMemcpy(out_host, out, num_elements * sizeof(u32), cudaMemcpyDeviceToHost) >> GPULDA_CHECK;
-  //
-  // for(i32 i = 0; i < num_unique_elements; ++i) {
-  //   assert(out_host[i] == num_elements / num_unique_elements);
-  //   out_host[i] = 0;
-  // }
-  //
-  // // insert2: block, rebuild
-  // test_hash_map_insert2<<<1,GPULDA_POLYA_URN_SAMPLE_BLOCKDIM>>>(num_unique_elements, num_elements, max_size, out, true);
-  // cudaDeviceSynchronize() >> GPULDA_CHECK;
-  //
-  // cudaMemcpy(out_host, out, num_elements * sizeof(u32), cudaMemcpyDeviceToHost) >> GPULDA_CHECK;
-  //
-  // for(i32 i = 0; i < num_unique_elements; ++i) {
-  //   assert(out_host[i] == num_elements / num_unique_elements);
-  //   out_host[i] = 0;
-  // }
+  // insert2: warp, rebuild
+  test_hash_map_insert2<<<1,warpSize>>>(num_unique_elements, num_elements, max_size, out, true);
+  cudaDeviceSynchronize() >> GPULDA_CHECK;
+
+  cudaMemcpy(out_host, out, num_elements * sizeof(u32), cudaMemcpyDeviceToHost) >> GPULDA_CHECK;
+
+  for(i32 i = 0; i < num_unique_elements; ++i) {
+    assert(out_host[i] == num_elements / num_unique_elements);
+    out_host[i] = 0;
+  }
+
+  // insert2: block, rebuild
+  test_hash_map_insert2<<<1,GPULDA_POLYA_URN_SAMPLE_BLOCKDIM>>>(num_unique_elements, num_elements, max_size, out, true);
+  cudaDeviceSynchronize() >> GPULDA_CHECK;
+
+  cudaMemcpy(out_host, out, num_elements * sizeof(u32), cudaMemcpyDeviceToHost) >> GPULDA_CHECK;
+
+  for(i32 i = 0; i < num_unique_elements; ++i) {
+    assert(out_host[i] == num_elements / num_unique_elements);
+    out_host[i] = 0;
+  }
 
 
 
