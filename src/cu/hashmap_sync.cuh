@@ -7,11 +7,6 @@
 #define GPULDA_HASH_LINE_SIZE 16
 #define GPULDA_HASH_MAX_NUM_LINES 4
 #define GPULDA_HASH_GROWTH_RATE 1.2f
-#define GPULDA_HASH_DEBUG 1
-
-#ifdef GPULDA_HASH_DEBUG
-#include <cstdio>
-#endif
 
 namespace gpulda {
 
@@ -62,24 +57,6 @@ struct HashMap {
   __device__ __forceinline__ static constexpr u64 empty() {
     return 0xffffffff00000000;
   }
-
-
-
-
-
-
-  #ifdef GPULDA_HASH_DEBUG
-  __device__ inline void debug_print_slot(i32 slot) {
-    printf("\nhl:s\tk\tv\tis:st:d\n");
-    for(i32 s = slot; s < slot + warpSize/2; ++s) {
-      u64 entry = data[s % capacity];
-      printf("%d:%d\t%u\t%d\t", s % 16, s % capacity, key(entry), value(entry));
-      if(entry != empty()) printf("%d:%d:%d", hash_slot(key(entry)), hash_stride(key(entry)), key_distance(key(entry), slot));
-      printf("\n");
-    }
-    printf("\n");
-  }
-  #endif
 
 
 
