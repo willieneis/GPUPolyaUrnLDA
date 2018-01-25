@@ -116,7 +116,7 @@ struct HashMap {
     if(threadIdx.x == 0) {
       // round up to ensure cache alignment
       size = 0;
-      capacity = (allocate_capacity / GPULDA_HASH_LINE_SIZE) * GPULDA_HASH_LINE_SIZE;
+      capacity = max(allocate_capacity / GPULDA_HASH_LINE_SIZE, 5) * GPULDA_HASH_LINE_SIZE;
       data_non_aligned = (int4*) malloc((capacity + GPULDA_HASH_LINE_SIZE) * sizeof(u64));
       u64 offset = (GPULDA_HASH_LINE_SIZE * sizeof(u64)) - (((u64) data_non_aligned) % (GPULDA_HASH_LINE_SIZE * sizeof(u64)));
       data = (u64*) (data_non_aligned + (offset / sizeof(int4)));
