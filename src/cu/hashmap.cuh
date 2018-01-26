@@ -246,7 +246,7 @@ struct HashMap {
     i32 slot = hash_slot(half_warp_key);
     i32 stride = hash_stride(half_warp_key);
     i32 distance = 0;
-    for(i32 i = 0;/*exit on break*/;++i) {
+    for(i32 i = 0; i < blockDim.x && distance < GPULDA_HASH_MAX_NUM_LINES; ++i) {
       // retrieve entry for current half lane
       u64 thread_entry = data[slot + half_lane_idx];
 
@@ -274,18 +274,18 @@ struct HashMap {
       if(half_lane_idx == swap_idx) {
         u64 old = atomicCAS(&data[slot + half_lane_idx], thread_entry, thread_new_entry);
         swap_success = (thread_entry == old);
-        }
+      }
       swap_success = __shfl(swap_success, swap_idx, warpSize/2);
 
       // if swap succeeded, either exit or prepare new key
       if(swap_success) {
         if(key_found != 0) {
-          break;
+          return;
         } else if(key_empty != 0) {
           if(half_lane_idx == 0) {
             atomicAdd(&size, 1);
           }
-          break;
+          return;
         } else {
           half_warp_key = __shfl(key(thread_new_entry), swap_idx, warpSize/2);
           diff = __shfl(value(thread_new_entry), swap_idx, warpSize/2);
@@ -299,14 +299,11 @@ struct HashMap {
         slot = (slot + stride) % capacity;
         distance += 1;
       }
+    }
 
-      // declare failure if reached limit
-      if(distance >= GPULDA_HASH_MAX_NUM_LINES || i >= blockDim.x) {
-        if(half_lane_idx == 0) {
-          atomicOr(&rebuild, true);
-        }
-        break;
-      }
+    // if we didn't return successfully, declare failure
+    if(half_lane_idx == 0) {
+      atomicOr(&rebuild, true);
     }
   }
 
