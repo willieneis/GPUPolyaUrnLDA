@@ -20,10 +20,8 @@ int main(void) {
   u32 C[V] = {1,1,1,1,1};
   constexpr u32 buffer_size = 5;
   constexpr u32 max_D = 2;
-  constexpr u32 hashmap_size = 96;
-  constexpr u32 max_N_d = hashmap_size;
 
-  gpulda::Args args = {alpha,beta,K,V,C,buffer_size,max_D,max_N_d};
+  gpulda::Args args = {alpha,beta,K,V,C,buffer_size,max_D};
   u32 z[buffer_size] = {0,0,0,0,0};
   u32 w[buffer_size] = {0,1,2,3,4};
   u32 d[max_D] = {3,2};

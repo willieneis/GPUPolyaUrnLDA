@@ -24,14 +24,11 @@ pub struct Args {
     #[structopt(long="K", display_order_raw="3", help = "Number of topics", default_value = "100")]
     pub k: u32,
 
-    #[structopt(long="buffer_size", display_order_raw="4", help = "Buffer size", default_value = "262144")]
+    #[structopt(long="buffer_size", display_order_raw="4", help = "Buffer size", default_value = "33554432")]
     pub buffer_size: u32,
 
-    #[structopt(long="max_D", display_order_raw="5", help = "Maximum number of documents per buffer", default_value = "10")]
+    #[structopt(long="max_D", display_order_raw="5", help = "Maximum number of documents per buffer", default_value = "16384")]
     pub max_d: u32,
-
-    #[structopt(long="max_N_d", display_order_raw="6", help = "Maximum document size", default_value = "32768")]
-    pub max_n_d: u32,
 
     #[structopt(long="n_mc", display_order_raw="7", help = "Number of Monte Carlo iterations", default_value = "1")]
     pub n_mc: u32,

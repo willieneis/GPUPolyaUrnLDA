@@ -10,7 +10,6 @@ pub struct Args_FFI {
     pub c: *const c_void,
     pub buffer_size: uint32_t,
     pub max_d: uint32_t,
-    pub max_n_d: uint32_t,
 }
 
 #[link(name = "GPUPolyaUrnLDA"/*, kind = "static"*/)] // static fails to link CUDA runtime
