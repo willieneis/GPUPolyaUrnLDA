@@ -38,24 +38,22 @@ __global__ void sample_topics(u32 size,
     u32 K, u32 V, u32 max_N_d,
     f32* Phi_dense, f32* sigma_a,
     f32** prob, u32** alias, u32 table_size, curandStatePhilox4_32_10_t* rng) {
-  // initialize variables
+  // initialize
   __shared__ curandStatePhilox4_32_10_t block_rng;
   __shared__ f32 u[2];
   __shared__ f32* block_mPhi;
   __shared__ i32 block_mPhi_length;
   __shared__ HashMap m;
   __shared__ f32 block_scan_temp[GPULDA_SAMPLE_TOPICS_BLOCKDIM / GPULDA_BLOCK_SCAN_WARP_SIZE];
+  u32 block_d_len = d_len[blockIdx.x];
+  u32 block_d_idx = d_idx[blockIdx.x];
   if(threadIdx.x == 0) {
     block_rng = rng[0];
     block_mPhi_length = 0;
     block_mPhi = NULL;
+    skipahead((unsigned long long int) block_d_idx, &block_rng);
   }
-  __syncthreads();
-
-  // initialize
-  u32 block_d_len = d_len[blockIdx.x];
-  u32 block_d_idx = d_idx[blockIdx.x];
-  m.init(K_d[blockIdx.x], &block_rng);
+  m.init(threadIdx.x == 0 ? K_d[blockIdx.x] : 0, &block_rng);
   __syncthreads();
 
   // count topics in document
@@ -112,11 +110,13 @@ __global__ void sample_topics(u32 size,
   }
 
   // update topic count and deallocate hashmap
-  K_d[blockIdx.x] = m.size;
-  m.deallocate();
-  if(block_mPhi != NULL) {
-    free(block_mPhi);
+  if(threadIdx.x == 0) {
+    K_d[blockIdx.x] = m.size;
+    if(block_mPhi != NULL) {
+      free(block_mPhi);
+    }
   }
+  m.deallocate();
 }
 
 }
