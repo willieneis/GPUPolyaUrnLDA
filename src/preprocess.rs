@@ -59,10 +59,13 @@ pub fn preprocess() {
 
     for line in input.lines() {
         let tokens = get_tokens(line.unwrap());
-        z.write_all(as_bytes(&(0..tokens.len()).map(|_| unif.ind_sample(&mut rand)).collect())).unwrap();
+        let mut indicators = (0..tokens.len()).map(|_| unif.ind_sample(&mut rand)).collect();
+        z.write_all(as_bytes(&indicators)).unwrap();
         w.write_all(as_bytes(&tokens.iter().map(|t| *token_ids.get(t).unwrap()).collect())).unwrap();
         d.write_all(as_bytes(&vec![tokens.len() as u32])).unwrap();
-        k_d.write_all(as_bytes(&vec![ARGS.max_n_d])).unwrap();
+        indicators.sort_unstable();
+        indicators.dedup();
+        k_d.write_all(as_bytes(&vec![indicators.len() as u32])).unwrap();
     }
 
     z.flush().unwrap(); w.flush().unwrap(); d.flush().unwrap(); k_d.flush().unwrap();

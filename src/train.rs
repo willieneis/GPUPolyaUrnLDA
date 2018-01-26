@@ -24,8 +24,8 @@ fn fill_buffer(buffer: &mut Buffer, z: &mut Cursor<MmapMut>, w: &mut Cursor<Mmap
         let d_size = d.read_u32::<LittleEndian>().unwrap_or(0);
         n_docs += 1;
         n_tokens += d_size;
-        if n_tokens > ARGS.max_n_d {
-            panic!("n_tokens exceeded max_N_d: {}", n_tokens)
+        if d_size > ARGS.buffer_size {
+            panic!("document size exceeded buffer size: {}", d_size)
         }
         if d_size == 0 || n_docs > ARGS.max_d || n_tokens > ARGS.buffer_size {
             n_docs -= 1;
@@ -68,7 +68,6 @@ pub fn train() {
         c: c.as_ptr() as *const c_void,
         buffer_size: ARGS.buffer_size,
         max_d: ARGS.max_d,
-        max_n_d: ARGS.max_n_d,
     };
     let mut buffers: Vec<Buffer> = repeat(0).map(|_| Buffer::new()).take(1).collect();
     initialize(&args, &buffers);
@@ -95,9 +94,11 @@ pub fn train() {
                 sync_buffer(buffer);
 
                 empty_buffer(buffer, &mut z, &mut w, &mut d, &mut k_d);
+                println!("sampled one buffer");
             }
         }
         z.get_mut().flush().unwrap();
+        z.set_position(0); w.set_position(0); d.set_position(0); k_d.set_position(0);
         println!("finished iteration: {}", _i);
     }
 
