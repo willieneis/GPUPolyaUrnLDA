@@ -35,7 +35,6 @@ __global__ void compute_d_idx(u32* d_len, u32* d_idx, u32 n_docs) {
 
 __global__ void sample_topics(u32 size,
     u32* z, u32* w, u32* d_len, u32* d_idx, u32* K_d,
-    u32 K, u32 V, u32 max_N_d,
     f32* Phi_dense, f32* sigma_a,
     f32** prob, u32** alias, u32 table_size, curandStatePhilox4_32_10_t* rng) {
   // initialize
@@ -68,7 +67,6 @@ __global__ void sample_topics(u32 size,
 
     // remove current z from sufficient statistic
     m.insert2(block_z, threadIdx.x < warpSize/2 ? -1 : 0); // don't branch: might need to resize
-    __syncthreads();
 
     // grow or allocate mPhi array if necessary
     if(threadIdx.x == 0 && block_mPhi_length < m.capacity) {
@@ -105,6 +103,7 @@ __global__ void sample_topics(u32 size,
 
     // write output
     if(threadIdx.x == 0) {
+      // atomicAdd(&n, ..)
       z[block_d_idx + i] = block_z;
     }
   }

@@ -154,7 +154,7 @@ extern "C" void sample_z_async(Buffer* buffer) {
   compute_d_idx<<<1,GPULDA_COMPUTE_D_IDX_BLOCKDIM,0,*buffer->stream>>>(buffer->gpu_d_len, buffer->gpu_d_idx, buffer->n_docs);
 
   // sample the topic indicators
-  sample_topics<<<buffer->n_docs,GPULDA_SAMPLE_TOPICS_BLOCKDIM,0,*buffer->stream>>>(args->buffer_size, buffer->gpu_z, buffer->gpu_w, buffer->gpu_d_len, buffer->gpu_d_idx, buffer->gpu_K_d, args->K, args->V, args->max_N_d, Phi->dense, sigma_a, alias->prob, alias->alias, alias->table_size, buffer->gpu_rng);
+  sample_topics<<<buffer->n_docs,GPULDA_SAMPLE_TOPICS_BLOCKDIM,0,*buffer->stream>>>(args->buffer_size, buffer->gpu_z, buffer->gpu_w, buffer->gpu_d_len, buffer->gpu_d_idx, buffer->gpu_K_d, Phi->dense, sigma_a, alias->prob, alias->alias, alias->table_size, buffer->gpu_rng);
   rng_advance<<<1,1,0,*buffer->stream>>>(2*buffer->n_tokens,Phi_rng);
 
   // copy z back to host
