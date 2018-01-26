@@ -144,20 +144,13 @@ __device__ __forceinline__ void count_topics(u32* z, u32 document_size, HashMap*
     i32 i = offset * blockDim.x + threadIdx.x;
 
     // retreive z from global memory
-    u32 lane_z;
-    u32 lane_K;
-    if(i < document_size) {
-      lane_z = z[i];
-      lane_K = 1;
-    } else {
-      lane_z = 0;
-      lane_K = 0;
-    }
+    u32 lane_z = (i < document_size) ? z[i] : 0;
+    i32 lane_K = (i < document_size) ? 1 : 0;
 
     // insert to hashmap two half lanes at a time
     for(i32 j = 0; j < warpSize/2; ++j) {
       u32 half_warp_z = __shfl(lane_z, j, warpSize/2);
-      u32 half_warp_K = __shfl(lane_K, j, warpSize/2);
+      i32 half_warp_K = __shfl(lane_K, j, warpSize/2);
       m->insert2(half_warp_z, half_warp_K);
     }
   }

@@ -246,7 +246,7 @@ struct HashMap {
     i32 slot = hash_slot(half_warp_key);
     i32 stride = hash_stride(half_warp_key);
     i32 distance = 0;
-    while(true) {
+    for(i32 i = 0;/*exit on break*/;++i) {
       // retrieve entry for current half lane
       u64 thread_entry = data[slot + half_lane_idx];
 
@@ -294,16 +294,18 @@ struct HashMap {
         }
       }
 
-      // advance slot, declare failure if reached limit
+      // advance slot
       if(swap_idx == -1 || (swap_success && (no_key != 0))) {
         slot = (slot + stride) % capacity;
         distance += 1;
-        if(distance == GPULDA_HASH_MAX_NUM_LINES) {
-          if(half_lane_idx == 0) {
-            atomicOr(&rebuild, true);
-          }
-          break;
+      }
+
+      // declare failure if reached limit
+      if(distance >= GPULDA_HASH_MAX_NUM_LINES || i >= blockDim.x) {
+        if(half_lane_idx == 0) {
+          atomicOr(&rebuild, true);
         }
+        break;
       }
     }
   }
