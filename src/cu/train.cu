@@ -34,6 +34,18 @@ extern "C" void initialize(Args* init_args, Buffer* buffers, u32 n_buffers) {
   // set the pointer to args struct
   args = init_args;
 
+  // set heap size for hashmaps
+  size_t heap_size;
+  size_t minimum_heap_size = ((size_t) args->max_D) * ((size_t) GPULDA_D_HEAP_SIZE) * ((size_t) 2);
+  cudaDeviceGetLimit(&heap_size, cudaLimitMallocHeapSize) >> GPULDA_CHECK;
+  if(heap_size < minimum_heap_size) {
+    cudaDeviceSetLimit(cudaLimitMallocHeapSize, minimum_heap_size) >> GPULDA_CHECK;
+    cudaDeviceGetLimit(&heap_size, cudaLimitMallocHeapSize) >> GPULDA_CHECK;
+    if(heap_size < minimum_heap_size) {
+      cudaErrorMemoryAllocation >> GPULDA_CHECK;
+    }
+  }
+
   // allocate and initialize cuBLAS
   cublas_handle = new cublasHandle_t;
   cublasCreate(cublas_handle) >> GPULDA_CHECK;
