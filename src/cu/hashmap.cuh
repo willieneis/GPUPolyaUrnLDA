@@ -93,7 +93,7 @@ struct HashMap {
     if(threadIdx.x == 0) {
       // round up to ensure cache alignment
       size = 0;
-      capacity = max(allocate_capacity / GPULDA_HASH_LINE_SIZE, 5) * GPULDA_HASH_LINE_SIZE;
+      capacity = ((__float2uint_rz(((f32) allocate_capacity) * GPULDA_HASH_GROWTH_RATE) + 3*warpSize) / GPULDA_HASH_LINE_SIZE) * GPULDA_HASH_LINE_SIZE;
       data_non_aligned = (int4*) malloc((capacity + GPULDA_HASH_LINE_SIZE) * sizeof(u64));
       u64 offset = (GPULDA_HASH_LINE_SIZE * sizeof(u64)) - (((u64) data_non_aligned) % (GPULDA_HASH_LINE_SIZE * sizeof(u64)));
       data = (u64*) (data_non_aligned + (offset / sizeof(int4)));
@@ -161,7 +161,7 @@ struct HashMap {
     // repeat until resize succeeds or memory allocation fails
     do {
       // allocate new table
-      allocate(__float2uint_rz(capacity * GPULDA_HASH_GROWTH_RATE) + warpSize);
+      allocate(capacity);
       __syncthreads();
 
       // check for allocation failure

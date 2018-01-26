@@ -192,6 +192,7 @@ void test_hashmap() {
   constexpr i32 num_elements = 90; // large contention to ensure collisions occur
   constexpr i32 num_unique_elements = 9;
   constexpr i32 warpSize = 32;
+  constexpr i32 expected_size = ((((i32) (((f32) max_size) * GPULDA_HASH_GROWTH_RATE)) + 3*warpSize) / GPULDA_HASH_LINE_SIZE) * GPULDA_HASH_LINE_SIZE;
 
   i32* out;
   cudaMalloc(&out, num_elements * sizeof(i32)) >> GPULDA_CHECK;
@@ -202,8 +203,7 @@ void test_hashmap() {
   cudaDeviceSynchronize() >> GPULDA_CHECK;
 
   cudaMemcpy(out_host, out, sizeof(i32), cudaMemcpyDeviceToHost) >> GPULDA_CHECK;
-
-  assert(out_host[0] == (max_size / GPULDA_HASH_LINE_SIZE) * GPULDA_HASH_LINE_SIZE);
+  assert(out_host[0] == expected_size);
   out_host[0] = 0;
 
   // init<block>
@@ -211,8 +211,7 @@ void test_hashmap() {
   cudaDeviceSynchronize() >> GPULDA_CHECK;
 
   cudaMemcpy(out_host, out, sizeof(i32), cudaMemcpyDeviceToHost) >> GPULDA_CHECK;
-
-  assert(out_host[0] == (max_size / GPULDA_HASH_LINE_SIZE) * GPULDA_HASH_LINE_SIZE);
+  assert(out_host[0] == expected_size);
   out_host[0] = 0;
 
   // print steps
