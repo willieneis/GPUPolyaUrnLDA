@@ -93,7 +93,7 @@ struct HashMap {
     if(threadIdx.x == 0) {
       // round up to ensure cache alignment
       size = 0;
-      capacity = max(allocate_capacity / GPULDA_HASH_LINE_SIZE, 5) * GPULDA_HASH_LINE_SIZE;
+      capacity = ((__float2uint_rz(((f32) allocate_capacity) * GPULDA_HASH_GROWTH_RATE) + 3*warpSize) / GPULDA_HASH_LINE_SIZE) * GPULDA_HASH_LINE_SIZE;
       data_non_aligned = (int4*) malloc((capacity + GPULDA_HASH_LINE_SIZE) * sizeof(u64));
       u64 offset = (GPULDA_HASH_LINE_SIZE * sizeof(u64)) - (((u64) data_non_aligned) % (GPULDA_HASH_LINE_SIZE * sizeof(u64)));
       data = (u64*) (data_non_aligned + (offset / sizeof(int4)));
@@ -161,7 +161,7 @@ struct HashMap {
     // repeat until resize succeeds or memory allocation fails
     do {
       // allocate new table
-      allocate(__float2uint_rz(capacity * GPULDA_HASH_GROWTH_RATE) + warpSize);
+      allocate(capacity);
       __syncthreads();
 
       // check for allocation failure
@@ -246,7 +246,7 @@ struct HashMap {
     i32 slot = hash_slot(half_warp_key);
     i32 stride = hash_stride(half_warp_key);
     i32 distance = 0;
-    while(true) {
+    for(i32 i = 0; i < blockDim.x && distance < GPULDA_HASH_MAX_NUM_LINES; ++i) {
       // retrieve entry for current half lane
       u64 thread_entry = data[slot + half_lane_idx];
 
@@ -274,18 +274,18 @@ struct HashMap {
       if(half_lane_idx == swap_idx) {
         u64 old = atomicCAS(&data[slot + half_lane_idx], thread_entry, thread_new_entry);
         swap_success = (thread_entry == old);
-        }
+      }
       swap_success = __shfl(swap_success, swap_idx, warpSize/2);
 
       // if swap succeeded, either exit or prepare new key
       if(swap_success) {
         if(key_found != 0) {
-          break;
+          return;
         } else if(key_empty != 0) {
           if(half_lane_idx == 0) {
             atomicAdd(&size, 1);
           }
-          break;
+          return;
         } else {
           half_warp_key = __shfl(key(thread_new_entry), swap_idx, warpSize/2);
           diff = __shfl(value(thread_new_entry), swap_idx, warpSize/2);
@@ -294,17 +294,16 @@ struct HashMap {
         }
       }
 
-      // advance slot, declare failure if reached limit
+      // advance slot
       if(swap_idx == -1 || (swap_success && (no_key != 0))) {
         slot = (slot + stride) % capacity;
         distance += 1;
-        if(distance == GPULDA_HASH_MAX_NUM_LINES) {
-          if(half_lane_idx == 0) {
-            atomicOr(&rebuild, true);
-          }
-          break;
-        }
       }
+    }
+
+    // if we didn't return successfully, declare failure
+    if(half_lane_idx == 0) {
+      atomicOr(&rebuild, true);
     }
   }
 
