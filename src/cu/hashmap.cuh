@@ -11,7 +11,7 @@
 namespace gpulda {
 
 struct HashMap {
-  i32 size;
+  i32 num_elements;
   i32 capacity;
   u64* data;
   int4* data_non_aligned; static_assert(sizeof(int4) == 16, "int4 is not 16 bytes");
@@ -94,7 +94,7 @@ struct HashMap {
     // allocate memory
     if(threadIdx.x == 0) {
       // round up to ensure cache alignment
-      size = 0;
+      num_elements = 0;
       capacity = ((__float2uint_rz(((f32) allocate_capacity) * GPULDA_HASH_GROWTH_RATE) + 3*warpSize) / GPULDA_HASH_LINE_SIZE) * GPULDA_HASH_LINE_SIZE;
       data_non_aligned = (int4*) malloc(((capacity + GPULDA_HASH_LINE_SIZE) * sizeof(u64)) + ((temp ? capacity : 0) * sizeof(f32)));
       u64 offset = (GPULDA_HASH_LINE_SIZE * sizeof(u64)) - (((u64) data_non_aligned) % (GPULDA_HASH_LINE_SIZE * sizeof(u64)));
@@ -288,7 +288,7 @@ struct HashMap {
           return;
         } else if(key_empty != 0) {
           if(half_lane_idx == 0) {
-            atomicAdd(&size, 1);
+            atomicAdd(&num_elements, 1);
           }
           return;
         } else {

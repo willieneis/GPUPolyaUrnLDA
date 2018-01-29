@@ -97,7 +97,7 @@ __global__ void sample_topics(u32 size,
 
   // update topic count and deallocate hashmap
   if(threadIdx.x == 0) {
-    K_d[blockIdx.x] = m.size;
+    K_d[blockIdx.x] = m.num_elements;
   }
   m.deallocate();
 }
