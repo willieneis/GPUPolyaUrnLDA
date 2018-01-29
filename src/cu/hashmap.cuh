@@ -20,6 +20,8 @@ struct HashMap {
   i32 c;
   i32 d;
   i32 rebuild;
+  i32 temp;
+  f32* temp_data;
   curandStatePhilox4_32_10_t* rng;
 
 
@@ -94,9 +96,10 @@ struct HashMap {
       // round up to ensure cache alignment
       size = 0;
       capacity = ((__float2uint_rz(((f32) allocate_capacity) * GPULDA_HASH_GROWTH_RATE) + 3*warpSize) / GPULDA_HASH_LINE_SIZE) * GPULDA_HASH_LINE_SIZE;
-      data_non_aligned = (int4*) malloc((capacity + GPULDA_HASH_LINE_SIZE) * sizeof(u64));
+      data_non_aligned = (int4*) malloc(((capacity + GPULDA_HASH_LINE_SIZE) * sizeof(u64)) + ((temp ? capacity : 0) * sizeof(f32)));
       u64 offset = (GPULDA_HASH_LINE_SIZE * sizeof(u64)) - (((u64) data_non_aligned) % (GPULDA_HASH_LINE_SIZE * sizeof(u64)));
       data = (u64*) (data_non_aligned + (offset / sizeof(int4)));
+      temp_data = (f32*) (data + capacity);
       float4 r = curand_uniform4(rng);
       a = __float2uint_rz(capacity * r.w);
       b = __float2uint_rz(capacity * r.x);
@@ -137,11 +140,13 @@ struct HashMap {
 
 
 
-  __device__ inline i32 init(i32 initial_capacity, curandStatePhilox4_32_10_t* in_rng) {
+  __device__ inline i32 init(i32 initial_capacity, curandStatePhilox4_32_10_t* in_rng, i32 enable_temp = false) {
     // allocate table
     if(threadIdx.x == 0) {
       rng = in_rng;
+      temp = enable_temp;
     }
+    __syncthreads();
 
     // allocate table and return error code
     return allocate(initial_capacity);

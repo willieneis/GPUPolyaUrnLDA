@@ -85,10 +85,11 @@ __device__ __forceinline__ u32 draw_alias(f32 u, f32* prob, u32* alias, u32 tabl
 
 
 
-__device__ __forceinline__ u32 draw_wary_search(f32 u, HashMap* m, f32* mPhi, f32 sigma_b) {
+__device__ __forceinline__ u32 draw_wary_search(f32 u, HashMap* m, f32 sigma_b) {
   // determine size and key array
   i32 size = m->capacity;
   u64* data = m->data;
+  f32* mPhi = m->temp_data;
 
   u32 thread_key;
   i32 lane_idx = threadIdx.x; // TODO: vectorize
@@ -159,9 +160,10 @@ __device__ __forceinline__ void count_topics(u32* z, u32 document_size, HashMap*
 
 
 
-__device__ __forceinline__ f32 compute_product_cumsum(f32* mPhi, HashMap* m, f32* Phi_dense, f32* temp) {
+__device__ __forceinline__ f32 compute_product_cumsum(HashMap* m, f32* Phi_dense, f32* temp) {
   i32 m_size = m->capacity;
   u64* m_data = m->data;
+  f32* mPhi = m->temp_data;
 
   f32 initial_value = 0;
   for(i32 offset = 0; offset < m_size / blockDim.x + 1; ++offset) {

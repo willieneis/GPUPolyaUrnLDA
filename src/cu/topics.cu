@@ -40,19 +40,15 @@ __global__ void sample_topics(u32 size,
   // initialize
   __shared__ curandStatePhilox4_32_10_t block_rng;
   __shared__ f32 u[2];
-  __shared__ f32* block_mPhi;
-  __shared__ i32 block_mPhi_length;
   __shared__ HashMap m;
   __shared__ f32 block_scan_temp[GPULDA_SAMPLE_TOPICS_BLOCKDIM / GPULDA_BLOCK_SCAN_WARP_SIZE];
   u32 block_d_len = d_len[blockIdx.x];
   u32 block_d_idx = d_idx[blockIdx.x];
   if(threadIdx.x == 0) {
     block_rng = rng[0];
-    block_mPhi_length = 0;
-    block_mPhi = NULL;
     skipahead((unsigned long long int) block_d_idx, &block_rng);
   }
-  m.init(threadIdx.x == 0 ? K_d[blockIdx.x] : 0, &block_rng);
+  m.init(threadIdx.x == 0 ? K_d[blockIdx.x] : 0, &block_rng, true);
   __syncthreads();
 
   // count topics in document
@@ -68,15 +64,6 @@ __global__ void sample_topics(u32 size,
     // remove current z from sufficient statistic
     m.insert2(block_z, threadIdx.x < warpSize/2 ? -1 : 0); // don't branch: might need to resize
 
-    // grow or allocate mPhi array if necessary
-    if(threadIdx.x == 0 && block_mPhi_length < m.capacity) {
-      block_mPhi_length = m.capacity;
-      if(block_mPhi != NULL) {
-        free(block_mPhi);
-      }
-      block_mPhi = (f32*)malloc(block_mPhi_length*sizeof(f32));
-    }
-    __syncthreads();
 
     // compute random numbers
     if(threadIdx.x == 0) {
@@ -86,13 +73,13 @@ __global__ void sample_topics(u32 size,
 
     // compute m*phi and sigma_b
     f32 block_sigma_a = sigma_a[block_w];
-    f32 sigma_b = compute_product_cumsum(block_mPhi, &m, Phi_dense, block_scan_temp);
+    f32 sigma_b = compute_product_cumsum(&m, Phi_dense, block_scan_temp);
     __syncthreads();
 
     // update z
     if(u[0] * (block_sigma_a + sigma_b) > block_sigma_a) {
       // sample from m*Phi
-      block_z = draw_wary_search(u[1], &m, block_mPhi, sigma_b);
+      block_z = draw_wary_search(u[1], &m, sigma_b);
     } else {
       // sample from alias table
       block_z = draw_alias(u[1], prob[block_w], alias[block_w], table_size);
@@ -111,9 +98,6 @@ __global__ void sample_topics(u32 size,
   // update topic count and deallocate hashmap
   if(threadIdx.x == 0) {
     K_d[blockIdx.x] = m.size;
-    if(block_mPhi != NULL) {
-      free(block_mPhi);
-    }
   }
   m.deallocate();
 }
