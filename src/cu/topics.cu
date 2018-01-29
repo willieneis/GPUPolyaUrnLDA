@@ -39,7 +39,7 @@ __global__ void sample_topics(u32 size,
     f32** prob, u32** alias, u32 table_size, curandStatePhilox4_32_10_t* rng) {
   // initialize
   __shared__ curandStatePhilox4_32_10_t block_rng;
-  __shared__ f32 u[2];
+  __shared__ float2 u;
   __shared__ HashMap m;
   __shared__ f32 block_scan_temp[GPULDA_SAMPLE_TOPICS_BLOCKDIM / GPULDA_BLOCK_SCAN_WARP_SIZE];
   u32 block_d_len = d_len[blockIdx.x];
@@ -64,11 +64,10 @@ __global__ void sample_topics(u32 size,
     // remove current z from sufficient statistic
     m.insert2(block_z, threadIdx.x < warpSize/2 ? -1 : 0); // don't branch: might need to resize
 
-
     // compute random numbers
     if(threadIdx.x == 0) {
-      u[0] = curand_uniform(&block_rng);
-      u[1] = curand_uniform(&block_rng);
+      u.x = curand_uniform(&block_rng);
+      u.y = curand_uniform(&block_rng);
     }
 
     // compute m*phi and sigma_b
@@ -77,12 +76,12 @@ __global__ void sample_topics(u32 size,
     __syncthreads();
 
     // update z
-    if(u[0] * (block_sigma_a + sigma_b) > block_sigma_a) {
+    if(u.x * (block_sigma_a + sigma_b) > block_sigma_a) {
       // sample from m*Phi
-      block_z = draw_wary_search(u[1], &m, sigma_b);
+      block_z = draw_wary_search(u.y, &m, sigma_b);
     } else {
       // sample from alias table
-      block_z = draw_alias(u[1], prob[block_w], alias[block_w], table_size);
+      block_z = draw_alias(u.y, prob[block_w], alias[block_w], table_size);
     }
 
     // add new z to sufficient statistic
