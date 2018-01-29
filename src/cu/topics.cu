@@ -35,7 +35,7 @@ __global__ void compute_d_idx(u32* d_len, u32* d_idx, u32 n_docs) {
 
 __global__ void sample_topics(u32 size,
     u32* z, u32* w, u32* d_len, u32* d_idx, u32* K_d,
-    f32* Phi_dense, f32* sigma_a,
+    u32 V, u32* n_dense, f32* Phi_dense, f32* sigma_a,
     f32** prob, u32** alias, u32 table_size, curandStatePhilox4_32_10_t* rng) {
   // initialize
   __shared__ curandStatePhilox4_32_10_t block_rng;
@@ -89,7 +89,7 @@ __global__ void sample_topics(u32 size,
 
     // write output
     if(threadIdx.x == 0) {
-      // atomicAdd(&n, ..)
+      atomicAdd(&n_dense[block_z + V * block_w], 1);
       z[block_d_idx + i] = block_z;
     }
   }

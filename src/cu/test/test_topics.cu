@@ -300,6 +300,8 @@ void test_sample_topics() {
   f32* Phi_dense;
   cudaMalloc(&Phi_dense, K*V*sizeof(f32)) >> GPULDA_CHECK;
   cudaMemcpy(Phi_dense, Phi_host, K*V*sizeof(f32), cudaMemcpyHostToDevice) >> GPULDA_CHECK;
+  u32* n_dense;
+  cudaMalloc(&n_dense, K*V*sizeof(u32)) >> GPULDA_CHECK;
 
   // initialize test-specific sigma_a
   f32 sigma_a_host[V] = { 0.0f, 0.0f, 0.0f };
@@ -316,7 +318,7 @@ void test_sample_topics() {
   cudaDeviceSynchronize() >> GPULDA_CHECK;
 
   // sample a topic indicator
-  gpulda::sample_topics<<<n_docs,GPULDA_SAMPLE_TOPICS_BLOCKDIM>>>(args.buffer_size, buffer.gpu_z, buffer.gpu_w, buffer.gpu_d_len, buffer.gpu_d_idx, buffer.gpu_K_d, Phi_dense, sigma_a, NULL, NULL, 0, buffer.gpu_rng);
+  gpulda::sample_topics<<<n_docs,GPULDA_SAMPLE_TOPICS_BLOCKDIM>>>(args.buffer_size, buffer.gpu_z, buffer.gpu_w, buffer.gpu_d_len, buffer.gpu_d_idx, buffer.gpu_K_d, V, n_dense, Phi_dense, sigma_a, NULL, NULL, 0, buffer.gpu_rng);
   cudaDeviceSynchronize() >> GPULDA_CHECK;
 
   cudaMemcpy(z, buffer.gpu_z, buffer_size*sizeof(u32), cudaMemcpyDeviceToHost) >> GPULDA_CHECK;
@@ -326,6 +328,7 @@ void test_sample_topics() {
 
   // cleanup
   cudaFree(Phi_dense);
+  cudaFree(n_dense);
   cudaFree(sigma_a);
   gpulda::cleanup(&buffer, 1);
 }
