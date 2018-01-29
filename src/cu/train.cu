@@ -157,8 +157,8 @@ extern "C" void sample_phi() {
 
 extern "C" void sample_z_async(Buffer* buffer) {
   // copy z,w,d to GPU and compute d_idx based on document length
-  cudaMemcpyAsync(buffer->gpu_z, buffer->z, buffer->n_tokens*sizeof(u32), cudaMemcpyHostToDevice,*buffer->stream) >> GPULDA_CHECK; // copy z to GPU
-  cudaMemcpyAsync(buffer->gpu_w, buffer->w, buffer->n_tokens*sizeof(u32), cudaMemcpyHostToDevice,*buffer->stream) >> GPULDA_CHECK; // copy w to GPU
+  cudaMemcpyAsync(buffer->gpu_z, buffer->z, buffer->n_tokens*sizeof(u32), cudaMemcpyHostToDevice,*buffer->stream) >> GPULDA_CHECK;
+  cudaMemcpyAsync(buffer->gpu_w, buffer->w, buffer->n_tokens*sizeof(u32), cudaMemcpyHostToDevice,*buffer->stream) >> GPULDA_CHECK;
   cudaMemcpyAsync(buffer->gpu_d_len, buffer->d, buffer->n_docs*sizeof(u32), cudaMemcpyHostToDevice,*buffer->stream) >> GPULDA_CHECK;
   cudaMemcpyAsync(buffer->gpu_K_d, buffer->K_d, buffer->n_docs*sizeof(u32), cudaMemcpyHostToDevice,*buffer->stream) >> GPULDA_CHECK;
   compute_d_idx<<<1,GPULDA_COMPUTE_D_IDX_BLOCKDIM,0,*buffer->stream>>>(buffer->gpu_d_len, buffer->gpu_d_idx, buffer->n_docs);

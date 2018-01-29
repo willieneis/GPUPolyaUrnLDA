@@ -79,6 +79,9 @@ __global__ void sample_topics(u32 size,
     if(u.x * (block_sigma_a + sigma_b) > block_sigma_a) {
       // sample from m*Phi
       block_z = draw_wary_search(u.y, &m, sigma_b);
+      if(block_z == 0xffffffff) { // workaround for 0xffffffff bug in draw_wary_search
+        block_z = draw_alias(u.y, prob[block_w], alias[block_w], table_size);
+      }
     } else {
       // sample from alias table
       block_z = draw_alias(u.y, prob[block_w], alias[block_w], table_size);
