@@ -89,7 +89,7 @@ __global__ void sample_topics(u32 size,
 
     // write output
     if(threadIdx.x == 0) {
-      atomicAdd(&n_dense[block_z + V * block_w], 1);
+      atomicAdd(&n_dense[V*block_z + block_w], 1);
       z[block_d_idx + i] = block_z;
     }
   }
