@@ -89,7 +89,7 @@ __device__ __forceinline__ u32 draw_wary_search(f32 u, HashMap* m, f32 sigma_b) 
   // determine size and key array
   i32 size = m->capacity;
   u64* data = m->data;
-  f32* mPhi = m->temp_data;
+  f32* mPhi = m->temp_data; // length MUST be multiple of GPULDA_HASH_LINE_SIZE
 
   u32 thread_key;
   i32 lane_idx = threadIdx.x; // TODO: vectorize
@@ -115,7 +115,7 @@ __device__ __forceinline__ u32 draw_wary_search(f32 u, HashMap* m, f32 sigma_b) 
       }
       index = (left + right) / 2;
       thread_mPhi = mPhi[(16*index) + lane_idx];
-    } while(left != right);
+    } while(left < right); // don't use != because of possible edge case
 
     // retreive keys and determine value
     u64 thread_data = data[(16*left) + lane_idx];
