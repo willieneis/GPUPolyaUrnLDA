@@ -103,8 +103,8 @@ __device__ __forceinline__ u32 draw_wary_search(f32 u, HashMap* m, f32 sigma_b) 
     i32 index = (left + right)/2;
     f32 thread_mPhi = mPhi[(16*index) + lane_idx];
     do {
-      up = __ballot(target > thread_mPhi);
-      down = __ballot(target < thread_mPhi);
+      up = __ballot(target > thread_mPhi) & 0x0000ffff;
+      down = __ballot(target < thread_mPhi) & 0x0000ffff;
       if(__popc(up) == warpSize/2) {
         left = index + 1;
       } else if(__popc(down) == warpSize/2) {
