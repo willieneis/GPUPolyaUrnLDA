@@ -94,7 +94,6 @@ pub fn train() {
                 sync_buffer(buffer);
 
                 empty_buffer(buffer, &mut z, &mut w, &mut d, &mut k_d);
-                println!("sampled one buffer");
             }
         }
         z.get_mut().flush().unwrap();
