@@ -119,7 +119,7 @@ __device__ __forceinline__ u32 draw_wary_search(f32 u, HashMap* m, f32 sigma_b) 
 
     // retreive keys and determine value
     u64 thread_data = data[(16*index) + lane_idx];
-    u32 lane_found = __ballot(thread_mPhi > target);
+    u32 lane_found = __ballot(thread_mPhi >= target) & 0x0000ffff;
     i32 read_idx = __ffs(lane_found)-2; // -2 because 1-based, and we want the last thread below threshold, not first one above
 
     if(lane_found == 0) {
