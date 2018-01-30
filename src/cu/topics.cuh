@@ -104,7 +104,7 @@ __device__ __forceinline__ u32 draw_wary_search(f32 u, HashMap* m, f32 sigma_b) 
     f32 thread_mPhi = mPhi[(16*index) + lane_idx];
     do {
       up = __ballot(target > thread_mPhi) & 0x0000ffff;
-      down = __ballot(target < thread_mPhi) & 0x0000ffff;
+      down = __ballot(target <= thread_mPhi) & 0x0000ffff;
       if(__popc(up) == warpSize/2) {
         left = index + 1;
       } else if(__popc(down) == warpSize/2) {
@@ -118,8 +118,8 @@ __device__ __forceinline__ u32 draw_wary_search(f32 u, HashMap* m, f32 sigma_b) 
     } while(left < right); // don't use != because of possible edge case
 
     // retreive keys and determine value
-    u64 thread_data = data[(16*left) + lane_idx];
-    u32 lane_found = __ballot(thread_mPhi > target);
+    u64 thread_data = data[(16*index) + lane_idx];
+    u32 lane_found = __ballot(target <= thread_mPhi) & 0x0000ffff;
     i32 read_idx = __ffs(lane_found)-2; // -2 because 1-based, and we want the last thread below threshold, not first one above
 
     if(lane_found == 0) {
@@ -127,7 +127,7 @@ __device__ __forceinline__ u32 draw_wary_search(f32 u, HashMap* m, f32 sigma_b) 
       read_idx = 15;
     } else if(lane_found & 1 == 1) {
       // edge case 2: go back a slot, read from last thread
-      thread_data = data[16*(left - 1) + lane_idx]; // no need for min, slot 0 doesn't go into this edge case
+      thread_data = data[16*(index - 1) + lane_idx]; // no need for min, slot 0 doesn't go into this edge case
       read_idx = 15;
     }
     thread_key = __shfl(m->key(thread_data), read_idx);
