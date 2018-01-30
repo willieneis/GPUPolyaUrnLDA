@@ -52,7 +52,7 @@ __global__ void sample_topics(u32 size,
   __syncthreads();
 
   // count topics in document
-  count_topics(z + block_d_idx * sizeof(u32), block_d_len, &m);
+  count_topics(&z[block_d_idx], block_d_len, &m);
   __syncthreads();
 
   // loop over words
