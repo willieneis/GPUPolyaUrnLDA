@@ -5,7 +5,6 @@
 #include <cuda_runtime.h>
 #include <curand_kernel.h> // need to add -lcurand to nvcc flags
 
-#include "dsmatrix.cuh"
 #include "poisson.cuh"
 #include "spalias.cuh"
 

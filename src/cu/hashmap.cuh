@@ -11,7 +11,7 @@
 namespace gpulda {
 
 struct HashMap {
-  i32 size;
+  i32 num_elements;
   i32 capacity;
   u64* data;
   int4* data_non_aligned; static_assert(sizeof(int4) == 16, "int4 is not 16 bytes");
@@ -20,6 +20,8 @@ struct HashMap {
   i32 c;
   i32 d;
   i32 rebuild;
+  i32 temp;
+  f32* temp_data;
   curandStatePhilox4_32_10_t* rng;
 
 
@@ -92,11 +94,12 @@ struct HashMap {
     // allocate memory
     if(threadIdx.x == 0) {
       // round up to ensure cache alignment
-      size = 0;
+      num_elements = 0;
       capacity = ((__float2uint_rz(((f32) allocate_capacity) * GPULDA_HASH_GROWTH_RATE) + 3*warpSize) / GPULDA_HASH_LINE_SIZE) * GPULDA_HASH_LINE_SIZE;
-      data_non_aligned = (int4*) malloc((capacity + GPULDA_HASH_LINE_SIZE) * sizeof(u64));
+      data_non_aligned = (int4*) malloc(((capacity + GPULDA_HASH_LINE_SIZE) * sizeof(u64)) + ((temp ? capacity : 0) * sizeof(f32)));
       u64 offset = (GPULDA_HASH_LINE_SIZE * sizeof(u64)) - (((u64) data_non_aligned) % (GPULDA_HASH_LINE_SIZE * sizeof(u64)));
       data = (u64*) (data_non_aligned + (offset / sizeof(int4)));
+      temp_data = (f32*) (data + capacity);
       float4 r = curand_uniform4(rng);
       a = __float2uint_rz(capacity * r.w);
       b = __float2uint_rz(capacity * r.x);
@@ -137,11 +140,13 @@ struct HashMap {
 
 
 
-  __device__ inline i32 init(i32 initial_capacity, curandStatePhilox4_32_10_t* in_rng) {
+  __device__ inline i32 init(i32 initial_capacity, curandStatePhilox4_32_10_t* in_rng, i32 enable_temp = false) {
     // allocate table
     if(threadIdx.x == 0) {
       rng = in_rng;
+      temp = enable_temp;
     }
+    __syncthreads();
 
     // allocate table and return error code
     return allocate(initial_capacity);
@@ -283,7 +288,7 @@ struct HashMap {
           return;
         } else if(key_empty != 0) {
           if(half_lane_idx == 0) {
-            atomicAdd(&size, 1);
+            atomicAdd(&num_elements, 1);
           }
           return;
         } else {

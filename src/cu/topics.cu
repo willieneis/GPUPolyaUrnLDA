@@ -35,28 +35,24 @@ __global__ void compute_d_idx(u32* d_len, u32* d_idx, u32 n_docs) {
 
 __global__ void sample_topics(u32 size,
     u32* z, u32* w, u32* d_len, u32* d_idx, u32* K_d,
-    f32* Phi_dense, f32* sigma_a,
+    u32 V, u32* n_dense, f32* Phi_dense, f32* sigma_a,
     f32** prob, u32** alias, u32 table_size, curandStatePhilox4_32_10_t* rng) {
   // initialize
   __shared__ curandStatePhilox4_32_10_t block_rng;
-  __shared__ f32 u[2];
-  __shared__ f32* block_mPhi;
-  __shared__ i32 block_mPhi_length;
+  __shared__ float2 u;
   __shared__ HashMap m;
   __shared__ f32 block_scan_temp[GPULDA_SAMPLE_TOPICS_BLOCKDIM / GPULDA_BLOCK_SCAN_WARP_SIZE];
   u32 block_d_len = d_len[blockIdx.x];
   u32 block_d_idx = d_idx[blockIdx.x];
   if(threadIdx.x == 0) {
     block_rng = rng[0];
-    block_mPhi_length = 0;
-    block_mPhi = NULL;
     skipahead((unsigned long long int) block_d_idx, &block_rng);
   }
-  m.init(threadIdx.x == 0 ? K_d[blockIdx.x] : 0, &block_rng);
+  m.init(threadIdx.x == 0 ? K_d[blockIdx.x] : 0, &block_rng, true);
   __syncthreads();
 
   // count topics in document
-  count_topics(z + block_d_idx * sizeof(u32), block_d_len, &m);
+  count_topics(&z[block_d_idx], block_d_len, &m);
   __syncthreads();
 
   // loop over words
@@ -68,34 +64,27 @@ __global__ void sample_topics(u32 size,
     // remove current z from sufficient statistic
     m.insert2(block_z, threadIdx.x < warpSize/2 ? -1 : 0); // don't branch: might need to resize
 
-    // grow or allocate mPhi array if necessary
-    if(threadIdx.x == 0 && block_mPhi_length < m.capacity) {
-      block_mPhi_length = m.capacity;
-      if(block_mPhi != NULL) {
-        free(block_mPhi);
-      }
-      block_mPhi = (f32*)malloc(block_mPhi_length*sizeof(f32));
-    }
-    __syncthreads();
-
     // compute random numbers
     if(threadIdx.x == 0) {
-      u[0] = curand_uniform(&block_rng);
-      u[1] = curand_uniform(&block_rng);
+      u.x = curand_uniform(&block_rng);
+      u.y = curand_uniform(&block_rng);
     }
 
     // compute m*phi and sigma_b
     f32 block_sigma_a = sigma_a[block_w];
-    f32 sigma_b = compute_product_cumsum(block_mPhi, &m, Phi_dense, block_scan_temp);
+    f32 sigma_b = compute_product_cumsum(&m, Phi_dense, block_scan_temp);
     __syncthreads();
 
     // update z
-    if(u[0] * (block_sigma_a + sigma_b) > block_sigma_a) {
+    if(u.x * (block_sigma_a + sigma_b) > block_sigma_a) {
       // sample from m*Phi
-      block_z = draw_wary_search(u[1], &m, block_mPhi, sigma_b);
+      block_z = draw_wary_search(u.y, &m, sigma_b);
+      if(block_z == 0xffffffff) { // workaround for 0xffffffff bug in draw_wary_search
+        block_z = draw_alias(u.y, prob[block_w], alias[block_w], table_size);
+      }
     } else {
       // sample from alias table
-      block_z = draw_alias(u[1], prob[block_w], alias[block_w], table_size);
+      block_z = draw_alias(u.y, prob[block_w], alias[block_w], table_size);
     }
 
     // add new z to sufficient statistic
@@ -103,17 +92,14 @@ __global__ void sample_topics(u32 size,
 
     // write output
     if(threadIdx.x == 0) {
-      // atomicAdd(&n, ..)
+      atomicAdd(&n_dense[V*block_z + block_w], 1);
       z[block_d_idx + i] = block_z;
     }
   }
 
   // update topic count and deallocate hashmap
   if(threadIdx.x == 0) {
-    K_d[blockIdx.x] = m.size;
-    if(block_mPhi != NULL) {
-      free(block_mPhi);
-    }
+    K_d[blockIdx.x] = m.num_elements;
   }
   m.deallocate();
 }

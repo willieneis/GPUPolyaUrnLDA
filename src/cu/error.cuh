@@ -11,10 +11,10 @@ struct FileLine {
 };
 
 inline void operator>>(cudaError_t error, const FileLine &fl) {
-  if(error != cudaSuccess) /*{*/
+  if(error != cudaSuccess) {
     printf("CUDA error: %s %s:%d%s", cudaGetErrorString(error), fl.file, fl.line, "\n");
-  /*exit(error);*/
-  /*}*/
+    exit(error);
+  }
 }
 
 #ifdef CUBLAS_API_H_
@@ -35,10 +35,10 @@ inline const char* cublasGetErrorString(cublasStatus_t status) {
 }
 
 inline void operator>>(cublasStatus_t error, const FileLine &fl) {
-  if(error != CUBLAS_STATUS_SUCCESS) /*{*/
+  if(error != CUBLAS_STATUS_SUCCESS) {
     printf("cuBLAS error: %s %s:%d%s", cublasGetErrorString(error), fl.file, fl.line, "\n");
-  /*exit(error);*/
-  /*}*/
+    exit(error);
+  }
 }
 #endif
 
@@ -63,10 +63,10 @@ inline const char* curandGetErrorString(curandStatus_t status) {
 }
 
 inline void operator>>(curandStatus_t error, const FileLine &fl) {
-  if(error != CURAND_STATUS_SUCCESS) /*{*/
+  if(error != CURAND_STATUS_SUCCESS) {
     printf("cuRAND error: %s %s:%d%s", curandGetErrorString(error), fl.file, fl.line, "\n");
-  /*exit(error);*/
-  /*}*/
+    exit(error);
+  }
 }
 #endif
 

@@ -11,7 +11,7 @@ __global__ void compute_d_idx(u32* d_len, u32* d_idx, u32 n_docs);
 
 __global__ void sample_topics(u32 size,
     u32* z, u32* w, u32* d_len, u32* d_idx, u32* K_d,
-    f32* Phi_dense, f32* sigma_a,
+    u32 V, u32* n_dense, f32* Phi_dense, f32* sigma_a,
     f32** prob, u32** alias, u32 table_size, curandStatePhilox4_32_10_t* rng);
 
 
@@ -85,10 +85,11 @@ __device__ __forceinline__ u32 draw_alias(f32 u, f32* prob, u32* alias, u32 tabl
 
 
 
-__device__ __forceinline__ u32 draw_wary_search(f32 u, HashMap* m, f32* mPhi, f32 sigma_b) {
+__device__ __forceinline__ u32 draw_wary_search(f32 u, HashMap* m, f32 sigma_b) {
   // determine size and key array
   i32 size = m->capacity;
   u64* data = m->data;
+  f32* mPhi = m->temp_data; // length MUST be multiple of GPULDA_HASH_LINE_SIZE
 
   u32 thread_key;
   i32 lane_idx = threadIdx.x; // TODO: vectorize
@@ -102,8 +103,8 @@ __device__ __forceinline__ u32 draw_wary_search(f32 u, HashMap* m, f32* mPhi, f3
     i32 index = (left + right)/2;
     f32 thread_mPhi = mPhi[(16*index) + lane_idx];
     do {
-      up = __ballot(target > thread_mPhi);
-      down = __ballot(target < thread_mPhi);
+      up = __ballot(target > thread_mPhi) & 0x0000ffff;
+      down = __ballot(target <= thread_mPhi) & 0x0000ffff;
       if(__popc(up) == warpSize/2) {
         left = index + 1;
       } else if(__popc(down) == warpSize/2) {
@@ -114,11 +115,11 @@ __device__ __forceinline__ u32 draw_wary_search(f32 u, HashMap* m, f32* mPhi, f3
       }
       index = (left + right) / 2;
       thread_mPhi = mPhi[(16*index) + lane_idx];
-    } while(left != right);
+    } while(left < right); // don't use != because of possible edge case
 
     // retreive keys and determine value
-    u64 thread_data = data[(16*left) + lane_idx];
-    u32 lane_found = __ballot(thread_mPhi > target);
+    u64 thread_data = data[(16*index) + lane_idx];
+    u32 lane_found = __ballot(target <= thread_mPhi) & 0x0000ffff;
     i32 read_idx = __ffs(lane_found)-2; // -2 because 1-based, and we want the last thread below threshold, not first one above
 
     if(lane_found == 0) {
@@ -126,7 +127,7 @@ __device__ __forceinline__ u32 draw_wary_search(f32 u, HashMap* m, f32* mPhi, f3
       read_idx = 15;
     } else if(lane_found & 1 == 1) {
       // edge case 2: go back a slot, read from last thread
-      thread_data = data[16*(left - 1) + lane_idx]; // no need for min, slot 0 doesn't go into this edge case
+      thread_data = data[16*(index - 1) + lane_idx]; // no need for min, slot 0 doesn't go into this edge case
       read_idx = 15;
     }
     thread_key = __shfl(m->key(thread_data), read_idx);
@@ -159,9 +160,10 @@ __device__ __forceinline__ void count_topics(u32* z, u32 document_size, HashMap*
 
 
 
-__device__ __forceinline__ f32 compute_product_cumsum(f32* mPhi, HashMap* m, f32* Phi_dense, f32* temp) {
+__device__ __forceinline__ f32 compute_product_cumsum(HashMap* m, f32* Phi_dense, f32* temp) {
   i32 m_size = m->capacity;
   u64* m_data = m->data;
+  f32* mPhi = m->temp_data;
 
   f32 initial_value = 0;
   for(i32 offset = 0; offset < m_size / blockDim.x + 1; ++offset) {
